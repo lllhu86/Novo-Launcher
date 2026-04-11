@@ -1,0 +1,28 @@
+﻿<Application x:Class="MinecraftLauncher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MinecraftLauncher"
+             xmlns:converters="clr-namespace:MinecraftLauncher.Converters"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             StartupUri="MainWindow.xaml"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/ThemeStyles.xaml"/>
+                <ResourceDictionary Source="Styles/Animations.xaml"/>
+                <ResourceDictionary Source="Styles/LoadingAnimations.xaml"/>
+                <ResourceDictionary Source="Styles/IconParkIcons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+            <converters:BoolToStatusConverter x:Key="BoolToStatusConverter"/>
+            <converters:BoolToToggleConverter x:Key="BoolToToggleConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
+            <converters:MessageBackgroundConverter x:Key="MessageBackgroundConverter"/>
+            <converters:MessageAlignmentConverter x:Key="MessageAlignmentConverter"/>
+            <converters:RoleNameConverter x:Key="RoleNameConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

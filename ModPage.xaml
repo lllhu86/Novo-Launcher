@@ -1,0 +1,272 @@
+<UserControl x:Class="MinecraftLauncher.ModPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="550" d:DesignWidth="900"
+             Background="Transparent">
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="380"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- 左侧 MOD 列表区域 -->
+        <Grid Grid.Column="0" Margin="0,0,15,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- 搜索和筛选区域 -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                <TextBlock Text="MOD 下载" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,15"/>
+                
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox x:Name="SearchTextBox" 
+                             Text="搜索 MOD..." 
+                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                             Background="{DynamicResource TertiaryBackgroundBrush}" 
+                             BorderBrush="{DynamicResource SecondaryBackgroundBrush}" 
+                             BorderThickness="1"
+                             Padding="10,8"
+                             GotFocus="SearchTextBox_GotFocus"
+                             LostFocus="SearchTextBox_LostFocus"/>
+                    
+                    <Button Grid.Column="1" x:Name="SearchButton" Content="搜索" 
+                            Click="SearchButton_Click"
+                            Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource PrimaryBackgroundBrush}"
+                            BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="1"
+                            Padding="15,8" Margin="10,0,0,0"/>
+                </Grid>
+                
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="模组架构:" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,10,0"/>
+                    <RadioButton x:Name="AllModsRadio" Content="全部" GroupName="ModLoader" 
+                                 IsChecked="True" Foreground="{DynamicResource PrimaryForegroundBrush}" Margin="0,0,15,0"
+                                 Checked="ModLoader_Changed"/>
+                    <RadioButton x:Name="ForgeRadio" Content="Forge" GroupName="ModLoader" 
+                                 Foreground="{DynamicResource PrimaryForegroundBrush}" Margin="0,0,15,0"
+                                 Checked="ModLoader_Changed"/>
+                    <RadioButton x:Name="FabricRadio" Content="Fabric" GroupName="ModLoader" 
+                                 Foreground="{DynamicResource PrimaryForegroundBrush}" Margin="0,0,15,0"
+                                 Checked="ModLoader_Changed"/>
+                </StackPanel>
+            </StackPanel>
+            
+            <!-- 状态栏 -->
+            <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock x:Name="StatusText" Text="点击搜索按钮查找 MOD" 
+                           Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center"/>
+                
+                <Button Grid.Column="1" x:Name="LoadMoreButton" Content="加载更多" 
+                        Click="LoadMoreButton_Click"
+                        Background="{DynamicResource TertiaryBackgroundBrush}" Foreground="{DynamicResource PrimaryForegroundBrush}"
+                        BorderBrush="{DynamicResource SecondaryBackgroundBrush}" BorderThickness="1"
+                        Padding="12,5" Margin="0,0,10,0"/>
+                
+                <Button Grid.Column="2" x:Name="RefreshButton" Content="刷新" 
+                        Click="RefreshButton_Click"
+                        Background="{DynamicResource TertiaryBackgroundBrush}" Foreground="{DynamicResource PrimaryForegroundBrush}"
+                        BorderBrush="{DynamicResource SecondaryBackgroundBrush}" BorderThickness="1"
+                        Padding="12,5"/>
+            </Grid>
+            
+            <!-- MOD 列表 -->
+            <ListBox x:Name="ModsListBox" Grid.Row="2" 
+                     Background="{DynamicResource SecondaryBackgroundBrush}" Foreground="{DynamicResource PrimaryForegroundBrush}"
+                     BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="1"
+                     SelectionChanged="ModsListBox_SelectionChanged"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="5" Padding="10" Margin="5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- MOD 图标 -->
+                                <Image Grid.Column="0" Width="56" Height="56" Margin="0,0,12,0"
+                                       Source="{Binding IconUrl}" 
+                                       Stretch="UniformToFill"/>
+                                
+                                <!-- MOD 信息 -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold" 
+                                               Foreground="{DynamicResource PrimaryForegroundBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11" 
+                                               Foreground="{DynamicResource SecondaryForegroundBrush}" TextWrapping="Wrap" 
+                                               MaxHeight="32" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="作者：" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="10"/>
+                                        <TextBlock Text="{Binding Author}" FontSize="10" Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+                                        <TextBlock Text=" | 下载：" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="10" Margin="8,0,4,0"/>
+                                        <TextBlock Text="{Binding Downloads}" FontSize="10" 
+                                                   Foreground="{DynamicResource AccentBrush}"/>
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding VersionFiles}" Margin="0,4,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource SecondaryBackgroundBrush}" CornerRadius="3" 
+                                                        Padding="4,2" Margin="0,0,4,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Loaders[0]}" FontSize="9" 
+                                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding GameVersions[0]}" FontSize="9" 
+                                                                   Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                
+                                <!-- 缩小后的下载按钮 -->
+                                <Button Grid.Column="2" x:Name="DownloadButton" Content="下载" 
+                                        Click="DownloadButton_Click"
+                                        Background="{DynamicResource AccentBrush}" Foreground="#1a1a1a"
+                                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                                        Padding="10,5"
+                                        Tag="{Binding}" 
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        
+        <!-- 右侧 MOD 详情面板 -->
+        <Border Grid.Column="1" x:Name="DetailPanel" 
+                Background="{DynamicResource SecondaryBackgroundBrush}" 
+                BorderBrush="{DynamicResource TertiaryBackgroundBrush}" 
+                BorderThickness="1" CornerRadius="8" Padding="15"
+                Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- 详情标题 -->
+                    <TextBlock x:Name="DetailTitle" Text="" FontSize="18" FontWeight="Bold" 
+                               Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    
+                    <!-- MOD 图标 -->
+                    <Image x:Name="DetailIcon" Width="80" Height="80" HorizontalAlignment="Left" 
+                           Margin="0,0,0,15" Stretch="UniformToFill"/>
+                    
+                    <!-- 基本信息 -->
+                    <Border Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="5" Padding="12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="作者:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12"/>
+                                <TextBlock x:Name="DetailAuthor" Grid.Column="1" Text="" FontSize="12" 
+                                           Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="下载次数:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12"/>
+                                <TextBlock x:Name="DetailDownloads" Grid.Column="1" Text="" FontSize="12" 
+                                           Foreground="{DynamicResource AccentBrush}"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="版本:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12"/>
+                                <TextBlock x:Name="DetailVersion" Grid.Column="1" Text="" FontSize="12" 
+                                           Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- 详细介绍 -->
+                    <TextBlock Text="详细介绍" FontSize="14" FontWeight="Bold" 
+                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="DetailDescription" Text="" FontSize="12" 
+                               Foreground="{DynamicResource PrimaryForegroundBrush}" TextWrapping="Wrap" 
+                               Margin="0,0,0,15" LineHeight="20"/>
+                    
+                    <!-- 前置依赖 -->
+                    <TextBlock x:Name="DependenciesHeader" Text="前置依赖" FontSize="14" FontWeight="Bold" 
+                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                    <Border x:Name="DependenciesPanel" Background="{DynamicResource TertiaryBackgroundBrush}" 
+                            CornerRadius="5" Padding="12" Margin="0,0,0,15" Visibility="Collapsed">
+                        <ItemsControl x:Name="DependenciesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource SecondaryBackgroundBrush}" CornerRadius="4" 
+                                            Padding="8,6" Margin="0,0,0,5">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AccentBrush}"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="10" 
+                                                       Foreground="{DynamicResource SecondaryForegroundBrush}" 
+                                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                    <TextBlock x:Name="NoDependenciesText" Text="无前置依赖" FontSize="12" 
+                               Foreground="{DynamicResource SecondaryForegroundBrush}" 
+                               Margin="0,0,0,15" Visibility="Collapsed"/>
+                    
+                    <!-- 版本选择 -->
+                    <TextBlock Text="选择版本" FontSize="14" FontWeight="Bold" 
+                               Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                    <ComboBox x:Name="VersionSelector" Background="{DynamicResource TertiaryBackgroundBrush}" 
+                              Foreground="{DynamicResource PrimaryForegroundBrush}" 
+                              BorderBrush="{DynamicResource SecondaryBackgroundBrush}" Margin="0,0,0,15"
+                              SelectionChanged="VersionSelector_SelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Version}" FontSize="12" Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+                                    <TextBlock Text=" - " FontSize="12" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                    <TextBlock Text="{Binding Loaders[0]}" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    
+                    <!-- 下载按钮 -->
+                    <Button x:Name="DetailDownloadButton" Content="下载此版本" 
+                            Click="DetailDownloadButton_Click"
+                            Background="{DynamicResource AccentBrush}" Foreground="#1a1a1a"
+                            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+                            Padding="15,10" FontSize="14" FontWeight="SemiBold"
+                            HorizontalAlignment="Stretch"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

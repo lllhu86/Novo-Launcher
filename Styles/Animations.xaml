@@ -1,0 +1,236 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- 淡入动画 -->
+    <Storyboard x:Key="FadeInStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.3"/>
+    </Storyboard>
+    
+    <!-- 淡出动画 -->
+    <Storyboard x:Key="FadeOutStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="1" To="0" Duration="0:0:0.3"/>
+    </Storyboard>
+    
+    <!-- 缩放动画 -->
+    <Storyboard x:Key="ScaleUpStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                        From="0.95" To="1" Duration="0:0:0.2">
+            <DoubleAnimation.EasingFunction>
+                <BackEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                        From="0.95" To="1" Duration="0:0:0.2">
+            <DoubleAnimation.EasingFunction>
+                <BackEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 按钮悬停动画 -->
+    <Storyboard x:Key="ButtonHoverStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                        To="1.05" Duration="0:0:0.15"/>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                        To="1.05" Duration="0:0:0.15"/>
+    </Storyboard>
+    
+    <!-- 按钮正常状态动画 -->
+    <Storyboard x:Key="ButtonNormalStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                        To="1" Duration="0:0:0.15"/>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                        To="1" Duration="0:0:0.15"/>
+    </Storyboard>
+    
+    <!-- 滑动进入动画 -->
+    <Storyboard x:Key="SlideInFromLeftStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        From="-50" To="0" Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.3"/>
+    </Storyboard>
+    
+    <!-- 滑动进入动画（从右侧） -->
+    <Storyboard x:Key="SlideInFromRightStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        From="50" To="0" Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.3"/>
+    </Storyboard>
+    
+    <!-- 滑动进入动画（从下方） -->
+    <Storyboard x:Key="SlideInFromBottomStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                        From="30" To="0" Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.3"/>
+    </Storyboard>
+    
+    <!-- 颜色过渡动画 -->
+    <ColorAnimationUsingKeyFrames x:Key="ColorTransitionStoryboard">
+        <LinearColorKeyFrame KeyTime="0:0:0" Value="#1a1a2e"/>
+        <LinearColorKeyFrame KeyTime="0:0:0.3" Value="#16213e"/>
+    </ColorAnimationUsingKeyFrames>
+    
+    <!-- 导航项选中动画 -->
+    <Storyboard x:Key="NavigationItemSelectedStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0.7" To="1" Duration="0:0:0.2"/>
+        <ThicknessAnimation Storyboard.TargetProperty="Margin"
+                           From="5,2,5,2" To="0,2,0,2" Duration="0:0:0.2">
+            <ThicknessAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </ThicknessAnimation.EasingFunction>
+        </ThicknessAnimation>
+    </Storyboard>
+    
+    <!-- 卡片加载动画 -->
+    <Storyboard x:Key="CardLoadStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.4">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                        From="20" To="0" Duration="0:0:0.4">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 脉冲动画（用于加载指示器） -->
+    <Storyboard x:Key="PulseStoryboard" RepeatBehavior="Forever">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0.6" To="1" Duration="0:0:1" AutoReverse="True">
+            <DoubleAnimation.EasingFunction>
+                <SineEase EasingMode="EaseInOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 旋转动画（用于加载图标） -->
+    <Storyboard x:Key="RotateStoryboard" RepeatBehavior="Forever">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                        From="0" To="360" Duration="0:0:1">
+            <DoubleAnimation.EasingFunction>
+                <SineEase EasingMode="EaseInOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 弹跳进入动画 -->
+    <Storyboard x:Key="BounceInStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                        From="0" To="1" Duration="0:0:0.5">
+            <DoubleAnimation.EasingFunction>
+                <BounceEase EasingMode="EaseOut" Bounces="3"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                        From="0" To="1" Duration="0:0:0.5">
+            <DoubleAnimation.EasingFunction>
+                <BounceEase EasingMode="EaseOut" Bounces="3"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 连续弹跳动画 -->
+    <Storyboard x:Key="ContinuousBounceStoryboard" RepeatBehavior="Forever">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                        From="0" To="-10" Duration="0:0:0.6" AutoReverse="True">
+            <DoubleAnimation.EasingFunction>
+                <BounceEase EasingMode="EaseInOut" Bounces="2"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 闪烁动画（用于通知） -->
+    <Storyboard x:Key="FlashStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.2">
+            <DoubleAnimation.EasingFunction>
+                <QuadraticEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="1" To="0" Duration="0:0:0.3" BeginTime="0:0:0.5">
+            <DoubleAnimation.EasingFunction>
+                <QuadraticEase EasingMode="EaseIn"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 摇摆动画 -->
+    <Storyboard x:Key="ShakeStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        From="-10" To="10" Duration="0:0:0.1" AutoReverse="True" RepeatBehavior="3x"/>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        To="0" Duration="0:0:0.1" BeginTime="0:0:0.4"/>
+    </Storyboard>
+    
+    <!-- 渐变位移动画 -->
+    <Storyboard x:Key="GradientShiftStoryboard" RepeatBehavior="Forever">
+        <DoubleAnimation Storyboard.TargetProperty="(Shape.Fill).(LinearGradientBrush.Transform).(TranslateTransform.X)"
+                        From="0" To="100" Duration="0:0:3" AutoReverse="True">
+            <DoubleAnimation.EasingFunction>
+                <SineEase EasingMode="EaseInOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 页面切换淡入动画 -->
+    <Storyboard x:Key="PageTransitionFadeInStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.4">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+    <!-- 页面切换滑入动画 -->
+    <Storyboard x:Key="PageTransitionSlideInStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        From="100" To="0" Duration="0:0:0.5">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.5"/>
+    </Storyboard>
+    
+    <!-- 列表项依次进入动画 -->
+    <Storyboard x:Key="ListItemStaggerInStoryboard">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                        From="0" To="1" Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                        From="-20" To="0" Duration="0:0:0.3">
+            <DoubleAnimation.EasingFunction>
+                <CubicEase EasingMode="EaseOut"/>
+            </DoubleAnimation.EasingFunction>
+        </DoubleAnimation>
+    </Storyboard>
+    
+</ResourceDictionary>

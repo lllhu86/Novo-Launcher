@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>NMCL</AssemblyName>
+    <Product>NMCL</Product>
+    <ApplicationIcon>Assets\nmcl_logo.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Authors>NMCL Team</Authors>
+    <Description>Minecraft 启动器 - 支持版本选择和镜像源下载</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\nmcl_logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MahApps.Metro.IconPacks.Material" Version="5.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

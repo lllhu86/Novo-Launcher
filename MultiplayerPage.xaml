@@ -1,0 +1,221 @@
+﻿<Page x:Class="MinecraftLauncher.MultiplayerPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+      xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+      Background="{DynamicResource PrimaryBackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+            <iconPacks:PackIconMaterial Kind="LanConnect" Width="28" Height="28" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <TextBlock Text="P2P 联机" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <iconPacks:PackIconMaterial Kind="InformationOutline" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="使用说明" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+                        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13">
+                            通过 P2P 打洞技术实现点对点联机，无需公网 IP，延迟低。基于 WebRTC 技术，通过信令服务器交换网络信息，尝试建立 UDP 直连。
+                        </TextBlock>
+
+                        <Grid Margin="0,15,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="连接状态:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" x:Name="ConnectionStatusText" Text="未连接" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <iconPacks:PackIconMaterial Kind="ServerPlus" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="创建房间" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="房间名称:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,12,0"/>
+                            <TextBox Grid.Column="1" x:Name="RoomNameTextBox" Text="我的房间" Style="{DynamicResource ModernTextBox}"/>
+                        </Grid>
+
+                        <Button x:Name="CreateRoomButton" Content="创建房间"
+                                Click="CreateRoomButton_Click"
+                                Style="{StaticResource ModernButton}"
+                                HorizontalAlignment="Left"
+                                helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+
+                        <Grid x:Name="RoomInfoPanel" Visibility="Collapsed" Margin="0,15,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="房间 ID:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,12,0"/>
+                            <Border Grid.Column="1" Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="6" Padding="14,8">
+                                <TextBlock x:Name="RoomIdText" Text="" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="18"/>
+                            </Border>
+                            <Button Grid.Column="2" x:Name="CopyRoomIdButton" Content="复制"
+                                    Click="CopyRoomIdButton_Click" Margin="12,0,0,0"
+                                    Style="{StaticResource ModernButton}"
+                                    helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                        </Grid>
+
+                        <TextBlock x:Name="WaitingText" Text="等待其他玩家加入..."
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,12,0,0" FontSize="13" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <iconPacks:PackIconMaterial Kind="AccountMultiple" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="加入房间" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="房间 ID:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,12,0"/>
+                            <TextBox Grid.Column="1" x:Name="JoinRoomIdTextBox" Style="{DynamicResource ModernTextBox}"/>
+                        </Grid>
+
+                        <Button x:Name="JoinRoomButton" Content="加入房间"
+                                Click="JoinRoomButton_Click"
+                                Style="{StaticResource ModernButton}"
+                                HorizontalAlignment="Left"
+                                helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <iconPacks:PackIconMaterial Kind="Connection" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="连接信息" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="本地代理端口:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13"/>
+                            <TextBlock Grid.Column="1" x:Name="LocalProxyPortText" Text="未启动" Foreground="{DynamicResource AccentBrush}" FontSize="13" Margin="8,0,0,0"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="连接类型:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13"/>
+                            <TextBlock Grid.Column="1" x:Name="ConnectionTypeText" Text="-" Foreground="{DynamicResource AccentBrush}" FontSize="13" Margin="8,0,0,0"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="对方地址:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13"/>
+                            <TextBlock Grid.Column="1" x:Name="RemoteAddressText" Text="-" Foreground="{DynamicResource AccentBrush}" FontSize="13" Margin="8,0,0,0"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="延迟:" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13"/>
+                            <TextBlock Grid.Column="1" x:Name="LatencyText" Text="-" Foreground="{DynamicResource AccentBrush}" FontSize="13" Margin="8,0,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <iconPacks:PackIconMaterial Kind="Gamepad" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="游戏设置" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="连接成功后，在 Minecraft 多人游戏中添加服务器:"
+                                   Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="6" Padding="14,10">
+                                <TextBlock x:Name="ServerAddressText" Text="localhost:25565" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="15"/>
+                            </Border>
+                            <Button Grid.Column="1" x:Name="CopyServerAddressButton" Content="复制"
+                                    Click="CopyServerAddressButton_Click" Margin="12,0,0,0"
+                                    Style="{StaticResource ModernButton}"
+                                    helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                        </Grid>
+
+                        <Button x:Name="DisconnectButton" Content="断开连接"
+                                Click="DisconnectButton_Click"
+                                Style="{StaticResource ModernButton}"
+                                HorizontalAlignment="Left"
+                                Visibility="Collapsed"
+                                helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <iconPacks:PackIconMaterial Kind="Cog" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="信令服务器设置" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="服务器地址:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,12,0"/>
+                            <TextBox Grid.Column="1" x:Name="SignalingServerTextBox" Text="wss://signaling.example.com" Style="{DynamicResource ModernTextBox}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="STUN 服务器:" Foreground="{DynamicResource SecondaryForegroundBrush}" VerticalAlignment="Center" FontSize="14" Margin="0,0,12,0"/>
+                            <TextBox Grid.Column="1" x:Name="StunServerTextBox" Text="stun:stun.l.google.com:19302" Style="{DynamicResource ModernTextBox}"/>
+                        </Grid>
+
+                        <Button x:Name="TestConnectionButton" Content="测试连接"
+                                Click="TestConnectionButton_Click"
+                                Style="{StaticResource ModernButton}"
+                                HorizontalAlignment="Left"
+                                helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

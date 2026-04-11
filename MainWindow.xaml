@@ -1,0 +1,426 @@
+﻿<Window x:Class="MinecraftLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+        xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+        Title="NMCL" Height="750" Width="1150"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Border Background="{DynamicResource PrimaryBackgroundBrush}" CornerRadius="12" BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="2">
+        <Grid Margin="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{DynamicResource SecondaryBackgroundBrush}" CornerRadius="12,0,0,12" BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="100"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="12,0,0,0">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Image Source="Assets/nmcl_logo.png" MaxWidth="180" MaxHeight="50" Stretch="Uniform" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Margin="12,25,12,0">
+                        <TextBlock x:Name="HomeNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="Home" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="主页" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="AIAssistantNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="Brain" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="AI 助手" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="ModsNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="Puzzle" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="MOD" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="AccountNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="Account" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="账号" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="MultiplayerNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="LanConnect" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="联机" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="ModpacksNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="PackageVariant" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="整合包" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                        <TextBlock x:Name="SettingsNavButton" Style="{StaticResource NavigationButton}"
+                                   MouseLeftButtonDown="NavigationTab_MouseLeftButtonDown" Margin="5,4"
+                                   helpers:AnimationBehaviors.EnableNavigationAnimation="True">
+                            <StackPanel Orientation="Horizontal">
+                                <iconPacks:PackIconMaterial Kind="Cog" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="设置" VerticalAlignment="Center" FontSize="15"/>
+                            </StackPanel>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Padding="12" Margin="10,0,10,12">
+                        <StackPanel>
+                            <TextBlock Text="主题" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13" Margin="0,0,0,8"/>
+                            <Border x:Name="ThemeToggleButton" Background="{DynamicResource TertiaryBackgroundBrush}" CornerRadius="8" Padding="12,10"
+                                  Cursor="Hand" MouseLeftButtonDown="ThemeToggleButton_Click"
+                                  helpers:AnimationBehaviors.EnableButtonAnimation="True">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <iconPacks:PackIconMaterial x:Name="ThemeIcon" Kind="ThemeLightDark" Width="18" Height="18" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="切换主题" FontSize="13"
+                                             Foreground="{DynamicResource PrimaryForegroundBrush}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Column="1" Margin="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource SecondaryBackgroundBrush}" CornerRadius="0,12,0,0"
+                        BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="0,0,0,1"
+                        MouseLeftButtonDown="WindowDragBorder_MouseLeftButtonDown">
+                    <Grid Margin="18,12,18,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" x:Name="PageTitleText" Text="主页" FontSize="22"
+                                 FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="MinimizeButton" Width="36" Height="36"
+                                    Cursor="Hand" MouseLeftButtonDown="MinimizeButton_Click">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource TertiaryBackgroundBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <iconPacks:PackIconMaterial Kind="WindowMinimize" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <Border x:Name="CloseButton" Width="36" Height="36"
+                                    Cursor="Hand" MouseLeftButtonDown="CloseButton_Click">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#e81123"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <iconPacks:PackIconMaterial Kind="WindowClose" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="{DynamicResource PrimaryBackgroundBrush}" Margin="18">
+                    <Grid>
+                        <Grid x:Name="HomePage">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="12">
+                                    <Border Style="{StaticResource CardContainer}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                                <iconPacks:PackIconMaterial Kind="PackageVariant" Width="22" Height="22" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0"/>
+                                                <TextBlock Text="版本管理" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                            </StackPanel>
+                                            <Button x:Name="LoadVersionsButton" Content="加载版本列表"
+                                                  Click="LoadVersionsButton_Click"
+                                                  Style="{StaticResource ModernButton}"
+                                                  HorizontalAlignment="Left" Margin="0,0,0,12"
+                                                  helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                                            <TextBlock x:Name="StatusText" Text="就绪"
+                                                     Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,0,0,12" FontSize="13"/>
+
+                                            <Grid x:Name="DownloadProgressPanel" Visibility="Collapsed" Margin="0,0,0,12">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock x:Name="ProgressStageText" Grid.Row="0" Text=""
+                                                         Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13" Margin="0,0,0,6"/>
+                                                <ProgressBar x:Name="DownloadProgressBar" Grid.Row="1" Height="10"
+                                                          Minimum="0" Maximum="100" Value="0"
+                                                          Background="{DynamicResource TertiaryBackgroundBrush}"
+                                                          Foreground="{DynamicResource AccentBrush}"
+                                                          BorderThickness="0"/>
+                                                <TextBlock x:Name="ProgressPercentText" Grid.Row="2" Text=""
+                                                         Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="12" Margin="0,6,0,0"
+                                                         HorizontalAlignment="Right"/>
+                                            </Grid>
+
+                                            <ListBox x:Name="VersionListBox" Height="220"
+                                                   SelectionChanged="VersionListBox_SelectionChanged"
+                                                   DisplayMemberPath="DisplayName"
+                                                   Style="{StaticResource ModernListBox}"
+                                                   helpers:AnimationBehaviors.EnableListItemAnimation="True"
+                                                   Visibility="Collapsed"/>
+
+                                            <StackPanel x:Name="CategorizedVersionPanel" Visibility="Collapsed">
+                                                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                            <iconPacks:PackIconMaterial Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="正式版" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                        </StackPanel>
+                                                        <Expander x:Name="ReleaseExpander" IsExpanded="True" Style="{StaticResource ModernExpander}">
+                                                            <ListBox x:Name="ReleaseListBox" Height="200"
+                                                                   SelectionChanged="VersionListBox_SelectionChanged"
+                                                                   DisplayMemberPath="DisplayName"
+                                                                   Style="{StaticResource ModernListBox}"
+                                                                   helpers:AnimationBehaviors.EnableListItemAnimation="True"/>
+                                                        </Expander>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                            <iconPacks:PackIconMaterial Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="预览版" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                        </StackPanel>
+                                                        <Expander x:Name="SnapshotExpander" IsExpanded="False" Style="{StaticResource ModernExpander}">
+                                                            <ListBox x:Name="SnapshotListBox" Height="200"
+                                                                   SelectionChanged="VersionListBox_SelectionChanged"
+                                                                   DisplayMemberPath="DisplayName"
+                                                                   Style="{StaticResource ModernListBox}"
+                                                                   helpers:AnimationBehaviors.EnableListItemAnimation="True"/>
+                                                        </Expander>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                            <iconPacks:PackIconMaterial Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="远古版" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                        </StackPanel>
+                                                        <Expander x:Name="OldVersionExpander" IsExpanded="False" Style="{StaticResource ModernExpander}">
+                                                            <ListBox x:Name="OldVersionListBox" Height="200"
+                                                                   SelectionChanged="VersionListBox_SelectionChanged"
+                                                                   DisplayMemberPath="DisplayName"
+                                                                   Style="{StaticResource ModernListBox}"
+                                                                   helpers:AnimationBehaviors.EnableListItemAnimation="True"/>
+                                                        </Expander>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,12">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                            <iconPacks:PackIconMaterial Kind="FolderOpen" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="愚人节版" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                                        </StackPanel>
+                                                        <Expander x:Name="AprilFoolsExpander" IsExpanded="False" Style="{StaticResource ModernExpander}">
+                                                            <ListBox x:Name="AprilFoolsListBox" Height="200"
+                                                                   SelectionChanged="VersionListBox_SelectionChanged"
+                                                                   DisplayMemberPath="DisplayName"
+                                                                   Style="{StaticResource ModernListBox}"
+                                                                   helpers:AnimationBehaviors.EnableListItemAnimation="True"/>
+                                                        </Expander>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock x:Name="VersionInfoText" Text="请选择一个版本"
+                                                     TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" Margin="0,12,0,0" FontSize="13"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource CardContainer}" Margin="0,18,0,10">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                    <iconPacks:PackIconMaterial Kind="FolderAccount" Width="22" Height="22" VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="最近存档" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock x:Name="SaveRecordCountText" Grid.Column="2" Text="0 个存档"
+                                                         Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                         FontSize="13" VerticalAlignment="Center"/>
+                                            </Grid>
+
+                                            <ListBox x:Name="SaveRecordListBox" Height="200"
+                                                     Style="{StaticResource ModernListBox}"
+                                                     SelectionMode="Single"
+                                                     MouseDoubleClick="SaveRecordListBox_MouseDoubleClick"
+                                                     helpers:AnimationBehaviors.EnableListItemAnimation="True">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="6,3">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <iconPacks:PackIconMaterial Grid.Column="0" Kind="FileDocument" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding SaveName}" FontWeight="SemiBold"
+                                                                         Foreground="{DynamicResource PrimaryForegroundBrush}" FontSize="14"/>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                                    <TextBlock Text="{Binding DisplayLastPlayed}"
+                                                                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                             FontSize="12"/>
+                                                                    <TextBlock Text=" · "
+                                                                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                             FontSize="12"/>
+                                                                    <TextBlock Text="{Binding GameVersion}"
+                                                                             Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                                             FontSize="12"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            <Border Grid.Column="2" Background="{DynamicResource TertiaryBackgroundBrush}"
+                                                                    CornerRadius="4" Padding="10,4" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                                <TextBlock Text="{Binding DisplayPlayTime}"
+                                                                         Foreground="{DynamicResource AccentBrush}"
+                                                                         FontSize="12" FontWeight="SemiBold"/>
+                                                            </Border>
+                                                            <Button Grid.Column="3" Content="详情"
+                                                                    Click="SaveRecordDetailButton_Click"
+                                                                    Tag="{Binding}"
+                                                                    Style="{StaticResource ModernButton}"
+                                                                    Padding="12,4" FontSize="12"
+                                                                    VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+
+                                            <TextBlock x:Name="NoSaveRecordText" Text="暂无存档记录，启动游戏后将自动记录"
+                                                     Foreground="{DynamicResource SecondaryForegroundBrush}"
+                                                     FontSize="13" Margin="0,12,0,0" TextAlignment="Center"
+                                                     Visibility="Collapsed"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <Grid x:Name="ModsPage" Visibility="Collapsed">
+                            <ContentControl x:Name="ModsContent"/>
+                        </Grid>
+
+                        <Grid x:Name="AIAssistantPageGrid" Visibility="Collapsed">
+                            <Frame x:Name="AIAssistantFrame" NavigationUIVisibility="Hidden"/>
+                        </Grid>
+
+                        <Grid x:Name="AccountPageGrid" Visibility="Collapsed">
+                            <Frame x:Name="AccountFrame" NavigationUIVisibility="Hidden"/>
+                        </Grid>
+
+                        <Grid x:Name="MultiplayerPageGrid" Visibility="Collapsed">
+                            <Frame x:Name="MultiplayerFrame" NavigationUIVisibility="Hidden"/>
+                        </Grid>
+
+                        <Grid x:Name="ModpacksPageGrid" Visibility="Collapsed">
+                            <ContentControl x:Name="ModpacksContent"/>
+                        </Grid>
+
+                        <Grid x:Name="SettingsPageGrid" Visibility="Collapsed">
+                            <Frame x:Name="SettingsFrame" NavigationUIVisibility="Hidden"/>
+                        </Grid>
+
+                        <Grid x:Name="SaveDetailPageGrid" Visibility="Collapsed">
+                            <Frame x:Name="SaveDetailFrame" NavigationUIVisibility="Hidden"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Background="{DynamicResource SecondaryBackgroundBrush}" CornerRadius="0,0,12,12"
+                        BorderBrush="{DynamicResource TertiaryBackgroundBrush}" BorderThickness="0,1,0,0"
+                        Padding="22,16">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="Java 路径:" VerticalAlignment="Center"
+                                     Margin="0,0,12,0" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="14"/>
+                            <TextBox Grid.Column="1" x:Name="JavaPathTextBox"
+                                   ToolTip="Java.exe 的完整路径(留空自动搜索)"
+                                   Style="{DynamicResource ModernTextBox}"/>
+                            <Button Grid.Column="2" x:Name="BrowseJavaButton" Content="浏览..."
+                                  Click="BrowseJavaButton_Click" Margin="12,0,0,0"
+                                  Style="{StaticResource ModernButton}"
+                                  helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0" Text="当前账号:" VerticalAlignment="Center"
+                                     Margin="0,0,12,0" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="14"/>
+                            <TextBlock Grid.Column="1" x:Name="CurrentAccountText" Text="未选择账号"
+                                     VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                            <Button Grid.Column="2" x:Name="PlayButton" Content="开始游戏"
+                                  IsEnabled="False" Click="PlayButton_Click" Margin="18,0,0,0"
+                                  Style="{StaticResource ModernButton}"
+                                  helpers:AnimationBehaviors.EnableButtonAnimation="True"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
