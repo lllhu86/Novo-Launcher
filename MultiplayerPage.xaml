@@ -1,4 +1,4 @@
-﻿<Page x:Class="MinecraftLauncher.MultiplayerPage"
+<Page x:Class="MinecraftLauncher.MultiplayerPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
@@ -17,6 +17,18 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18" Background="#33FF6B6B" BorderBrush="#FFFF6B6B" BorderThickness="1">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <iconPacks:PackIconMaterial Kind="AlertCircleOutline" Foreground="#FFFF6B6B" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="功能开发中" FontSize="18" FontWeight="Bold" Foreground="#FFFF6B6B" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryForegroundBrush}" FontSize="13">
+                            ⚠️ P2P 联机功能目前处于开发阶段，WebRTC 数据通道尚未集成，实际无法建立真正的 P2P 连接。此功能仅作为 UI 预览展示，请勿用于实际联机。后续版本将集成完整的穿透服务。
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
                 <Border Style="{StaticResource CardContainer}" Margin="0,0,0,15" Padding="18">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">

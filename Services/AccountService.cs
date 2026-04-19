@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 
 namespace MinecraftLauncher
 {
-    public class AccountService
+    public class AccountService : IDisposable
     {
         private static readonly Lazy<AccountService> _instance = new(() => new AccountService());
         public static AccountService Instance => _instance.Value;
@@ -19,8 +19,7 @@ namespace MinecraftLauncher
         private readonly string _accountFilePath;
         private AccountData _accountData;
         private readonly HttpClient _httpClient;
-        
-        // 微软 OAuth 配置
+        private bool _disposed;
         private const string CLIENT_ID = "YOUR_CLIENT_ID"; // 需要替换为实际的 Client ID
         private const string DEVICE_CODE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";
         private const string TOKEN_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
@@ -46,14 +45,41 @@ namespace MinecraftLauncher
             if (File.Exists(_accountFilePath))
             {
                 var json = File.ReadAllText(_accountFilePath);
-                return JsonConvert.DeserializeObject<AccountData>(json) ?? new AccountData();
+                var data = JsonConvert.DeserializeObject<AccountData>(json) ?? new AccountData();
+                foreach (var account in data.Accounts)
+                {
+                    if (!string.IsNullOrEmpty(account.AccessToken))
+                        account.AccessToken = Services.DataProtectionHelper.Unprotect(account.AccessToken);
+                    if (!string.IsNullOrEmpty(account.RefreshToken))
+                        account.RefreshToken = Services.DataProtectionHelper.Unprotect(account.RefreshToken);
+                }
+                return data;
             }
             return new AccountData();
         }
 
         private void SaveAccounts()
         {
-            var json = JsonConvert.SerializeObject(_accountData, Formatting.Indented);
+            var dataToSave = new AccountData
+            {
+                Accounts = new List<Account>(),
+                SelectedIndex = _accountData.SelectedIndex
+            };
+            foreach (var account in _accountData.Accounts)
+            {
+                var protectedAccount = new Account
+                {
+                    Type = account.Type,
+                    Name = account.Name,
+                    Uuid = account.Uuid,
+                    AccessToken = !string.IsNullOrEmpty(account.AccessToken) ? Services.DataProtectionHelper.Protect(account.AccessToken) : "",
+                    RefreshToken = !string.IsNullOrEmpty(account.RefreshToken) ? Services.DataProtectionHelper.Protect(account.RefreshToken) : "",
+                    PlayerType = account.PlayerType,
+                    Auth = account.Auth
+                };
+                dataToSave.Accounts.Add(protectedAccount);
+            }
+            var json = JsonConvert.SerializeObject(dataToSave, Formatting.Indented);
             File.WriteAllText(_accountFilePath, json);
         }
 
@@ -183,7 +209,7 @@ namespace MinecraftLauncher
             }
             
             // 使用 Xbox Live 认证
-            var xboxAccount = await AuthenticateWithXboxAsync(tokenResult.AccessToken);
+            var xboxAccount = await AuthenticateWithXboxAsync(tokenResult.AccessToken, tokenResult.RefreshToken);
             return xboxAccount;
         }
 
@@ -206,7 +232,7 @@ namespace MinecraftLauncher
             throw new TimeoutException("登录超时");
         }
 
-        private async Task<Account> AuthenticateWithXboxAsync(string accessToken)
+        private async Task<Account> AuthenticateWithXboxAsync(string accessToken, string refreshToken)
         {
             // Xbox Live 认证
             var xboxRequest = new
@@ -323,10 +349,19 @@ namespace MinecraftLauncher
                 Name = playerName,
                 Uuid = playerUuid,
                 AccessToken = mcAccessToken,
-                RefreshToken = "", // 实际应该保存 refresh_token
+                RefreshToken = refreshToken,
                 PlayerType = "msa",
                 Auth = ""
             };
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _disposed = true;
+                _httpClient.Dispose();
+            }
         }
     }
 

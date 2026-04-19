@@ -49,7 +49,7 @@ public partial class AIAssistantPage : Page
     {
         Dispatcher.Invoke(() =>
         {
-            AddMessage("assistant", $"⚠️ 检测到游戏错误！\n\n🔍 错误类型: {errorEvent.ErrorType}\n📋 严重程度: {errorEvent.Severity}\n\n💡 建议: {errorEvent.SuggestedAction}");
+            AddMessage("assistant", $"[警告] 检测到游戏错误！\n\n[错误类型] {errorEvent.ErrorType}\n[严重程度] {errorEvent.Severity}\n\n[建议] {errorEvent.SuggestedAction}");
         });
         ErrorDetected?.Invoke(errorEvent);
     }
@@ -58,13 +58,13 @@ public partial class AIAssistantPage : Page
     {
         Dispatcher.Invoke(() =>
         {
-            var message = $"🔍 诊断完成\n\n";
+            var message = $"[诊断完成]\n\n";
             message += string.Join("\n", result.DiagnosticSteps);
-            message += $"\n\n🎯 根本原因: {result.RootCause}";
+            message += $"\n\n[根本原因] {result.RootCause}";
             
             if (result.Solutions.Count > 0)
             {
-                message += "\n\n💡 解决方案:";
+                message += "\n\n[解决方案]:";
                 for (int i = 0; i < result.Solutions.Count; i++)
                 {
                     var solution = result.Solutions[i];
@@ -90,7 +90,7 @@ public partial class AIAssistantPage : Page
 
     private void ShowConfigReminder()
     {
-        AddMessage("assistant", "⚠️ 请先点击「设置」按钮配置 API Key，以便使用 AI 功能。\n\n支持 OpenAI 兼容 API（如 OpenAI、Azure、本地部署的模型等）。");
+        AddMessage("assistant", "[提示] 请先点击「设置」按钮配置 API Key，以便使用 AI 功能。\n\n支持 OpenAI 兼容 API（如 OpenAI、Azure、本地部署的模型等）。");
     }
 
     private void ShowWelcomeMessage()
@@ -98,17 +98,17 @@ public partial class AIAssistantPage : Page
         var versions = _aiService.GetInstalledVersions();
         var saves = _aiService.GetAllSaves();
         
-        var welcomeMsg = "👋 你好！我是你的 Minecraft 启动器智能助手「小矿工」！\n\n";
-        welcomeMsg += "🎮 我可以帮你：\n";
-        welcomeMsg += "  • 📦 管理和诊断模组问题\n";
-        welcomeMsg += "  • 💾 分析存档状态\n";
-        welcomeMsg += "  • 🔧 优化游戏配置\n";
-        welcomeMsg += "  • 🐛 排查游戏崩溃问题\n";
-        welcomeMsg += "  • 📝 实时监控游戏日志\n\n";
+        var welcomeMsg = "你好！我是你的 Minecraft 启动器智能助手「小矿工」！\n\n";
+        welcomeMsg += "我可以帮你：\n";
+        welcomeMsg += "  • 管理和诊断模组问题\n";
+        welcomeMsg += "  • 分析存档状态\n";
+        welcomeMsg += "  • 优化游戏配置\n";
+        welcomeMsg += "  • 排查游戏崩溃问题\n";
+        welcomeMsg += "  • 实时监控游戏日志\n\n";
         
         if (versions.Count > 0)
         {
-            welcomeMsg += $"📊 检测到 {versions.Count} 个游戏版本";
+            welcomeMsg += $"[检测到] {versions.Count} 个游戏版本";
             if (saves.Count > 0)
             {
                 welcomeMsg += $"，{saves.Count} 个存档";
@@ -116,7 +116,7 @@ public partial class AIAssistantPage : Page
             welcomeMsg += "\n\n";
         }
         
-        welcomeMsg += "💡 试试点击下方的快捷按钮，或直接输入你的问题！";
+        welcomeMsg += "[提示] 试试点击下方的快捷按钮，或直接输入你的问题！";
         
         AddMessage("assistant", welcomeMsg);
     }
@@ -133,7 +133,7 @@ public partial class AIAssistantPage : Page
         var namePanel = new StackPanel { Orientation = Orientation.Horizontal };
         var nameText = new TextBlock
         {
-            Text = role == "user" ? "你" : "🤖 小矿工",
+            Text = role == "user" ? "你" : "[AI] 小矿工",
             FontWeight = FontWeights.Bold,
             FontSize = 12,
             Margin = new Thickness(0, 0, 0, 5),
@@ -210,7 +210,7 @@ public partial class AIAssistantPage : Page
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 错误: {ex.Message}");
+            AddMessage("assistant", $"[错误] {ex.Message}");
         }
         finally
         {
@@ -236,7 +236,7 @@ public partial class AIAssistantPage : Page
             _aiService.SaveConfig(dialog.Config);
             if (_aiService.IsConfigured)
             {
-                MessageBox.Show("✅ API 配置已保存！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("[成功] API 配置已保存！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
     }
@@ -251,18 +251,18 @@ public partial class AIAssistantPage : Page
         try
         {
             var recommendation = await _aiService.GetGameSettingsRecommendationAsync("balanced");
-            var response = $"💎 根据您的硬件配置，我推荐以下设置：\n\n" +
+            var response = $"[推荐] 根据您的硬件配置，我推荐以下设置：\n\n" +
                           $"• 内存分配: {recommendation.RecommendedMemoryMB / 1024.0:F1} GB\n" +
                           $"• 渲染距离: {recommendation.RenderDistance} 区块\n" +
                           $"• 图像品质: {recommendation.GraphicsMode}\n\n" +
-                          $"📝 JVM 参数:\n{recommendation.JvmArgs}\n\n" +
+                          $"[JVM 参数]:\n{recommendation.JvmArgs}\n\n" +
                           $"{recommendation.Explanation}";
             
             AddMessage("assistant", response);
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 获取推荐失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 获取推荐失败: {ex.Message}");
         }
         finally
         {
@@ -276,7 +276,7 @@ public partial class AIAssistantPage : Page
         var versions = _aiService.GetInstalledVersions();
         if (versions.Count == 0)
         {
-            AddMessage("assistant", "❌ 未检测到已安装的游戏版本。请先下载一个游戏版本。");
+            AddMessage("assistant", "[错误] 未检测到已安装的游戏版本。请先下载一个游戏版本。");
             return;
         }
         
@@ -287,9 +287,9 @@ public partial class AIAssistantPage : Page
         try
         {
             var sb = new StringBuilder();
-            sb.AppendLine("🔍 正在进行系统诊断...\n");
+            sb.AppendLine("[诊断] 正在进行系统诊断...\n");
             
-            sb.AppendLine("📦 已安装版本:");
+            sb.AppendLine("[版本] 已安装版本:");
             foreach (var v in versions.Take(5))
             {
                 sb.AppendLine($"  • {v.Id} ({v.ModLoader}, {v.ModCount} 模组)");
@@ -307,7 +307,7 @@ public partial class AIAssistantPage : Page
             
             if (allConflicts.Count > 0)
             {
-                sb.AppendLine($"\n⚠️ 检测到 {allConflicts.Count} 个模组问题:");
+                sb.AppendLine($"\n[警告] 检测到 {allConflicts.Count} 个模组问题:");
                 foreach (var conflict in allConflicts.Take(5))
                 {
                     sb.AppendLine($"  • [{conflict.Severity}] {conflict.Description}");
@@ -315,13 +315,13 @@ public partial class AIAssistantPage : Page
             }
             else
             {
-                sb.AppendLine("\n✅ 未检测到模组冲突");
+                sb.AppendLine("\n[正常] 未检测到模组冲突");
             }
             
             var logInfo = _aiService.GetLauncherLog();
             if (logInfo.ErrorCount > 0)
             {
-                sb.AppendLine($"\n❌ 启动器日志中有 {logInfo.ErrorCount} 个错误");
+                sb.AppendLine($"\n[错误] 启动器日志中有 {logInfo.ErrorCount} 个错误");
                 if (logInfo.ErrorLines.Count > 0)
                 {
                     sb.AppendLine("最近的错误:");
@@ -335,7 +335,7 @@ public partial class AIAssistantPage : Page
             var suggestions = await _aiService.GetOptimizationSuggestionsAsync();
             if (suggestions.Count > 0)
             {
-                sb.AppendLine($"\n💡 优化建议:");
+                sb.AppendLine($"\n[优化建议]:");
                 foreach (var s in suggestions.Take(3))
                 {
                     sb.AppendLine($"  • {s.Title}: {s.Description}");
@@ -346,7 +346,7 @@ public partial class AIAssistantPage : Page
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 诊断失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 诊断失败: {ex.Message}");
         }
         finally
         {
@@ -360,7 +360,7 @@ public partial class AIAssistantPage : Page
         var versions = _aiService.GetInstalledVersions().Where(v => v.ModCount > 0).ToList();
         if (versions.Count == 0)
         {
-            AddMessage("assistant", "❌ 未检测到安装了模组的游戏版本。");
+            AddMessage("assistant", "[错误] 未检测到安装了模组的游戏版本。");
             return;
         }
         
@@ -376,7 +376,7 @@ public partial class AIAssistantPage : Page
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 分析失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 分析失败: {ex.Message}");
         }
         finally
         {
@@ -390,7 +390,7 @@ public partial class AIAssistantPage : Page
         var saves = _aiService.GetAllSaves();
         if (saves.Count == 0)
         {
-            AddMessage("assistant", "❌ 未检测到存档。请先创建一个存档。");
+            AddMessage("assistant", "[错误] 未检测到存档。请先创建一个存档。");
             return;
         }
         
@@ -401,12 +401,12 @@ public partial class AIAssistantPage : Page
         try
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"📊 存档概览 ({saves.Count} 个存档)\n");
+            sb.AppendLine($"[存档概览] ({saves.Count} 个存档)\n");
             
             var largeSaves = saves.Where(s => s.SizeBytes > 500 * 1024 * 1024).ToList();
             var recentSaves = saves.Take(5).ToList();
             
-            sb.AppendLine("🕐 最近游玩:");
+            sb.AppendLine("[最近游玩]:");
             foreach (var save in recentSaves)
             {
                 sb.AppendLine($"  • {save.DisplayName} ({save.Version}) - {save.SizeDisplay}");
@@ -414,19 +414,19 @@ public partial class AIAssistantPage : Page
             
             if (largeSaves.Count > 0)
             {
-                sb.AppendLine($"\n⚠️ 大型存档 (>500MB):");
+                sb.AppendLine($"\n[警告] 大型存档 (>500MB):");
                 foreach (var save in largeSaves)
                 {
                     sb.AppendLine($"  • {save.DisplayName} - {save.SizeDisplay}");
                 }
-                sb.AppendLine("\n💡 建议使用 MCEdit 修剪未加载区块以减小存档体积。");
+                sb.AppendLine("\n[建议] 使用 MCEdit 修剪未加载区块以减小存档体积。");
             }
             
             AddMessage("assistant", sb.ToString());
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 分析失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 分析失败: {ex.Message}");
         }
         finally
         {
@@ -447,7 +447,7 @@ public partial class AIAssistantPage : Page
             
             if (logInfo.ErrorCount == 0)
             {
-                AddMessage("assistant", "✅ 启动器日志中没有检测到错误。\n\n如果你遇到了游戏问题，请确保游戏已经运行过并产生了日志文件。");
+                AddMessage("assistant", "[正常] 启动器日志中没有检测到错误。\n\n如果你遇到了游戏问题，请确保游戏已经运行过并产生了日志文件。");
                 return;
             }
 
@@ -460,13 +460,13 @@ public partial class AIAssistantPage : Page
             }
             else
             {
-                var response = $"📋 检测到 {logInfo.ErrorCount} 个错误:\n\n{errorContent}\n\n💡 请配置 API Key 以获得更详细的错误分析。";
+                var response = $"[日志] 检测到 {logInfo.ErrorCount} 个错误:\n\n{errorContent}\n\n[提示] 请配置 API Key 以获得更详细的错误分析。";
                 AddMessage("assistant", response);
             }
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 分析日志失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 分析日志失败: {ex.Message}");
         }
         finally
         {
@@ -490,7 +490,7 @@ public partial class AIAssistantPage : Page
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 获取信息失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 获取信息失败: {ex.Message}");
         }
         finally
         {
@@ -514,7 +514,7 @@ public partial class AIAssistantPage : Page
         }
         catch (Exception ex)
         {
-            AddMessage("assistant", $"❌ 获取推荐失败: {ex.Message}");
+            AddMessage("assistant", $"[错误] 获取推荐失败: {ex.Message}");
         }
         finally
         {
@@ -527,7 +527,7 @@ public partial class AIAssistantPage : Page
     {
         _currentGameVersion = version;
         _aiService.StartGameMonitoring(gameProcess, version);
-        AddMessage("assistant", $"🎮 开始监控游戏: {version}\n\n我将实时监控游戏日志，一旦发现问题会立即通知你！");
+        AddMessage("assistant", $"[监控] 开始监控游戏: {version}\n\n我将实时监控游戏日志，一旦发现问题会立即通知你！");
     }
 
     public void StopGameMonitoring()

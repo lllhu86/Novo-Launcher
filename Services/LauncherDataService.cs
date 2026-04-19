@@ -97,8 +97,7 @@ public class LauncherDataService
             
             try
             {
-                using var fs = File.OpenRead(levelDatPath);
-                var nbtData = ParseNBT(fs);
+                var nbtData = NbtParser.ParseGzipFile(levelDatPath);
                 
                 if (nbtData.TryGetValue("Data", out var data) && data is Dictionary<string, object> dataDict)
                 {
@@ -155,8 +154,9 @@ public class LauncherDataService
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                App.LogError($"解析存档 level.dat 失败：{savePath}", ex);
             }
             
             var datapacksDir = Path.Combine(savePath, "datapacks");
@@ -168,7 +168,7 @@ public class LauncherDataService
             
             return saveInfo;
         }
-        catch
+        catch (Exception ex)
         {
             return null;
         }
@@ -181,8 +181,9 @@ public class LauncherDataService
             return Directory.GetFiles(path, "*", SearchOption.AllDirectories)
                 .Sum(f => new FileInfo(f).Length);
         }
-        catch
+        catch (Exception ex)
         {
+            App.LogError($"获取目录大小失败：{path}", ex);
             return 0;
         }
     }
@@ -359,8 +360,9 @@ public class LauncherDataService
             
             return modInfo;
         }
-        catch
+        catch (Exception ex)
         {
+            App.LogError($"解析模组信息失败：{modPath}", ex);
             return null;
         }
     }
@@ -526,8 +528,9 @@ public class LauncherDataService
             
             return versionInfo;
         }
-        catch
+        catch (Exception ex)
         {
+            App.LogError($"获取版本信息失败：{versionName}", ex);
             return null;
         }
     }
@@ -707,129 +710,11 @@ public class LauncherDataService
             
             return report;
         }
-        catch
+        catch (Exception ex)
         {
+            App.LogError($"分析崩溃报告失败", ex);
             return null;
         }
-    }
-    
-    #endregion
-    
-    #region NBT解析
-    
-    private Dictionary<string, object> ParseNBT(FileStream fs)
-    {
-        var result = new Dictionary<string, object>();
-        try
-        {
-            using var reader = new BinaryReader(fs, Encoding.UTF8, true);
-            
-            byte tagType = reader.ReadByte();
-            if (tagType == 10)
-            {
-                ushort nameLength = reader.ReadUInt16();
-                byte[] nameBytes = reader.ReadBytes(nameLength);
-                
-                var compound = ReadCompound(reader);
-                foreach (var kvp in compound)
-                {
-                    result[kvp.Key] = kvp.Value;
-                }
-            }
-        }
-        catch { }
-        
-        return result;
-    }
-    
-    private Dictionary<string, object> ReadCompound(BinaryReader reader)
-    {
-        var result = new Dictionary<string, object>();
-        
-        while (true)
-        {
-            byte tagType = reader.ReadByte();
-            if (tagType == 0)
-                break;
-            
-            ushort nameLength = reader.ReadUInt16();
-            byte[] nameBytes = reader.ReadBytes(nameLength);
-            string name = Encoding.UTF8.GetString(nameBytes);
-            
-            object value = ReadTag(reader, tagType);
-            result[name] = value;
-        }
-        
-        return result;
-    }
-    
-    private object ReadTag(BinaryReader reader, byte tagType)
-    {
-        return tagType switch
-        {
-            1 => reader.ReadByte(),
-            2 => reader.ReadInt16(),
-            3 => reader.ReadInt32(),
-            4 => reader.ReadInt64(),
-            5 => reader.ReadSingle(),
-            6 => reader.ReadDouble(),
-            7 => ReadByteArray(reader),
-            8 => ReadString(reader),
-            9 => ReadList(reader),
-            10 => ReadCompound(reader),
-            11 => ReadIntArray(reader),
-            12 => ReadLongArray(reader),
-            _ => new object()
-        };
-    }
-    
-    private byte[] ReadByteArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        return reader.ReadBytes(length);
-    }
-    
-    private string ReadString(BinaryReader reader)
-    {
-        ushort length = reader.ReadUInt16();
-        byte[] bytes = reader.ReadBytes(length);
-        return Encoding.UTF8.GetString(bytes);
-    }
-    
-    private List<object> ReadList(BinaryReader reader)
-    {
-        var list = new List<object>();
-        byte listType = reader.ReadByte();
-        int length = reader.ReadInt32();
-        
-        for (int i = 0; i < length; i++)
-        {
-            list.Add(ReadTag(reader, listType));
-        }
-        
-        return list;
-    }
-    
-    private int[] ReadIntArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        var result = new int[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i] = reader.ReadInt32();
-        }
-        return result;
-    }
-    
-    private long[] ReadLongArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        var result = new long[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i] = reader.ReadInt64();
-        }
-        return result;
     }
     
     #endregion

@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace MinecraftLauncher.Services;
 
-public class ModService
+public class ModService : IDisposable
 {
     public class ModDep
     {
@@ -17,6 +17,7 @@ public class ModService
     
     private HttpClient? _httpClient;
     private const string MODRINTH_API = "https://api.modrinth.com/v2";
+    private bool _disposed;
 
     public event EventHandler<DownloadProgressEventArgs>? DownloadProgressChanged;
 
@@ -299,6 +300,15 @@ public class ModService
         {
             App.LogError($"下载 MOD 失败：{ex.Message}", ex);
             throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            _httpClient?.Dispose();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System.IO;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System.IO;
 using System.Net;
 using System.Windows;
 using System.Windows.Threading;
@@ -32,6 +32,45 @@ public partial class App : Application
         if (!Directory.Exists(LogFolder))
         {
             Directory.CreateDirectory(LogFolder);
+        }
+        CleanOldLogs();
+    }
+
+    private void CleanOldLogs()
+    {
+        try
+        {
+            var retentionDays = 7;
+            var cutoffDate = DateTime.Now.AddDays(-retentionDays);
+            var logFiles = Directory.GetFiles(LogFolder, "NovoLauncher_*.log");
+
+            foreach (var logFile in logFiles)
+            {
+                var fileInfo = new FileInfo(logFile);
+                if (fileInfo.LastWriteTime < cutoffDate)
+                {
+                    try
+                    {
+                        File.Delete(logFile);
+                    }
+                    catch
+                    {
+                    }
+                }
+                else if (fileInfo.Length > 50 * 1024 * 1024)
+                {
+                    try
+                    {
+                        File.Delete(logFile);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+        catch
+        {
         }
     }
 

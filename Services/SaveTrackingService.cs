@@ -18,11 +18,14 @@ public class SaveTrackingService
     private Process? _currentGameProcess;
     private DateTime _gameStartTime;
     private string _currentGameVersion = "";
+    private string _currentSavePath = "";
     private System.Timers.Timer? _saveCheckTimer;
     private List<string> _knownSaves = new();
     
     public event Action? SaveRecordsChanged;
     public event Action<SaveRecord>? SaveRecordClicked;
+    public event Action<SaveRecord, SaveDataSnapshot>? RealTimeDataUpdated;
+    public event Action<string>? ActiveSaveDetected;
     
     public static SaveTrackingService Instance
     {
@@ -94,20 +97,82 @@ public class SaveTrackingService
         return _saveData.SaveRecords.FirstOrDefault(s => s.SavePath == savePath);
     }
     
-    public void StartGameSession(Process gameProcess, string gameVersion)
+    public void StartGameSession(Process gameProcess, string gameVersion, string? specificSavePath = null)
     {
         _currentGameProcess = gameProcess;
         _gameStartTime = DateTime.Now;
         _currentGameVersion = gameVersion;
         _knownSaves = GetCurrentSaves();
+        _currentSavePath = specificSavePath ?? "";
+        
+        RealTimeSaveMonitorService.Instance.SaveDataUpdated += OnRealTimeDataUpdated;
+        RealTimeSaveMonitorService.Instance.ActiveSaveChanged += OnActiveSaveChanged;
+        RealTimeSaveMonitorService.Instance.StartMonitoring(gameProcess, gameVersion, specificSavePath);
         
         App.LogInfo($"开始游戏会话追踪，版本：{gameVersion}");
+    }
+    
+    private void OnRealTimeDataUpdated(SaveDataUpdateEventArgs args)
+    {
+        try
+        {
+            var record = _saveData.SaveRecords.FirstOrDefault(s => s.SavePath == args.SavePath);
+            if (record != null)
+            {
+                UpdateRecordFromSnapshot(record, args.Snapshot);
+                RealTimeDataUpdated?.Invoke(record, args.Snapshot);
+                App.LogInfo($"实时数据更新: {record.SaveName} - {args.Reason}");
+            }
+        }
+        catch (Exception ex)
+        {
+            App.LogError("处理实时数据更新失败", ex);
+        }
+    }
+    
+    private void OnActiveSaveChanged(string savePath)
+    {
+        _currentSavePath = savePath;
+        ActiveSaveDetected?.Invoke(savePath);
+        App.LogInfo($"活动存档切换: {Path.GetFileName(savePath)}");
+    }
+    
+    private void UpdateRecordFromSnapshot(SaveRecord record, SaveDataSnapshot snapshot)
+    {
+        record.GameMode = snapshot.GameMode;
+        record.Difficulty = snapshot.Difficulty;
+        record.Seed = snapshot.Seed;
+        record.WorldType = snapshot.WorldType;
+        record.HasCheats = snapshot.HasCheats;
+        record.PlayerX = snapshot.PlayerX;
+        record.PlayerY = snapshot.PlayerY;
+        record.PlayerZ = snapshot.PlayerZ;
+        record.Dimension = snapshot.Dimension;
+        record.GameTimeTicks = snapshot.GameTimeTicks;
+        record.Raining = snapshot.Raining;
+        record.Thundering = snapshot.Thundering;
+        record.LastPlayedTime = DateTime.Now;
+    }
+    
+    public SaveDataSnapshot? GetCurrentRealTimeSnapshot()
+    {
+        return RealTimeSaveMonitorService.Instance.GetCurrentSnapshot(_currentSavePath);
+    }
+    
+    public void SetActiveSave(string savePath)
+    {
+        _currentSavePath = savePath;
+        RealTimeSaveMonitorService.Instance.SetActiveSave(savePath);
     }
     
     public void EndGameSession()
     {
         if (_currentGameProcess == null)
             return;
+        
+        RealTimeSaveMonitorService.Instance.SaveDataUpdated -= OnRealTimeDataUpdated;
+        RealTimeSaveMonitorService.Instance.ActiveSaveChanged -= OnActiveSaveChanged;
+        RealTimeSaveMonitorService.Instance.StopMonitoring();
         
         var playTime = DateTime.Now - _gameStartTime;
         App.LogInfo($"游戏会话结束，游玩时长：{playTime.TotalMinutes:F1} 分钟");
@@ -386,94 +451,95 @@ public class SaveTrackingService
         try
         {
             var levelDatPath = Path.Combine(savePath, "level.dat");
-            if (File.Exists(levelDatPath))
+            if (!File.Exists(levelDatPath))
+                return result;
+
+            var compound = NbtParser.ParseGzipFile(levelDatPath);
+
+            if (compound.TryGetValue("Data", out var data) && data is Dictionary<string, object> dataDict)
             {
-                using var fs = File.OpenRead(levelDatPath);
-                using var gzipStream = new System.IO.Compression.GZipStream(fs, System.IO.Compression.CompressionMode.Decompress);
-                using var reader = new BinaryReader(gzipStream, Encoding.UTF8, true);
-                
-                byte tagType = reader.ReadByte();
-                if (tagType == 10)
+                if (dataDict.TryGetValue("GameType", out var gameType))
                 {
-                    ushort nameLength = reader.ReadUInt16();
-                    byte[] nameBytes = reader.ReadBytes(nameLength);
-                    
-                    var compound = ReadCompound(reader);
-                    
-                    if (compound.TryGetValue("Data", out var data) && data is Dictionary<string, object> dataDict)
+                    result.GameMode = NbtParser.GetInt32(gameType) switch
                     {
-                        if (dataDict.TryGetValue("GameType", out var gameType))
-                        {
-                            result.GameMode = gameType switch
-                            {
-                                0 => "survival",
-                                1 => "creative",
-                                2 => "adventure",
-                                3 => "spectator",
-                                _ => "survival"
-                            };
-                        }
-                        
-                        if (dataDict.TryGetValue("Difficulty", out var difficulty))
-                        {
-                            result.Difficulty = difficulty switch
-                            {
-                                0 => "peaceful",
-                                1 => "easy",
-                                2 => "normal",
-                                3 => "hard",
-                                _ => "normal"
-                            };
-                        }
-                        
-                        if (dataDict.TryGetValue("RandomSeed", out var seed))
-                        {
-                            result.Seed = seed?.ToString() ?? "";
-                        }
-                        
-                        if (dataDict.TryGetValue("allowCommands", out var allowCommands))
-                        {
-                            result.HasCheats = allowCommands is bool b && b;
-                        }
-                        
-                        if (dataDict.TryGetValue("generatorName", out var generatorName))
-                        {
-                            result.WorldType = generatorName?.ToString() ?? "default";
-                        }
-                        
-                        if (dataDict.TryGetValue("Time", out var time))
-                        {
-                            if (time is long l) result.Time = l;
-                            else if (time is int i) result.Time = i;
-                        }
-                        
-                        if (dataDict.TryGetValue("DayTime", out var dayTime))
-                        {
-                            if (dayTime is long l) result.DayTime = l;
-                            else if (dayTime is int i) result.DayTime = i;
-                        }
-                        
-                        if (dataDict.TryGetValue("raining", out var raining))
-                        {
-                            result.Raining = raining is bool b && b;
-                        }
-                        
-                        if (dataDict.TryGetValue("thundering", out var thundering))
-                        {
-                            result.Thundering = thundering is bool b && b;
-                        }
-                    }
+                        0 => "survival",
+                        1 => "creative",
+                        2 => "adventure",
+                        3 => "spectator",
+                        _ => "survival"
+                    };
                 }
                 
-                try
+                if (dataDict.TryGetValue("Difficulty", out var difficulty))
                 {
-                    var playerDataFile = Path.Combine(savePath, "level.dat_old");
-                    if (!File.Exists(playerDataFile))
+                    result.Difficulty = NbtParser.GetInt32(difficulty) switch
                     {
-                        playerDataFile = levelDatPath;
+                        0 => "peaceful",
+                        1 => "easy",
+                        2 => "normal",
+                        3 => "hard",
+                        _ => "normal"
+                    };
+                }
+                
+                if (dataDict.TryGetValue("RandomSeed", out var seed))
+                {
+                    result.Seed = seed?.ToString() ?? "";
+                }
+                
+                if (dataDict.TryGetValue("allowCommands", out var allowCommands))
+                {
+                    result.HasCheats = NbtParser.GetBoolean(allowCommands);
+                }
+                
+                if (dataDict.TryGetValue("generatorName", out var generatorName))
+                {
+                    result.WorldType = generatorName?.ToString() ?? "default";
+                }
+                
+                if (dataDict.TryGetValue("Time", out var time))
+                {
+                    result.Time = NbtParser.GetInt64(time);
+                }
+                
+                if (dataDict.TryGetValue("DayTime", out var dayTime))
+                {
+                    result.DayTime = NbtParser.GetInt64(dayTime);
+                }
+                
+                if (dataDict.TryGetValue("raining", out var raining))
+                {
+                    result.Raining = NbtParser.GetBoolean(raining);
+                }
+                
+                if (dataDict.TryGetValue("thundering", out var thundering))
+                {
+                    result.Thundering = NbtParser.GetBoolean(thundering);
+                }
+
+                if (dataDict.TryGetValue("Player", out var playerObj) && playerObj is Dictionary<string, object> playerDict)
+                {
+                    if (playerDict.TryGetValue("Pos", out var posObj) && posObj is List<object> posList && posList.Count >= 3)
+                    {
+                        result.PlayerX = NbtParser.GetDouble(posList[0]);
+                        result.PlayerY = NbtParser.GetDouble(posList[1]);
+                        result.PlayerZ = NbtParser.GetDouble(posList[2]);
+                    }
+
+                    if (playerDict.TryGetValue("Dimension", out var dimension))
+                    {
+                        if (dimension is int dimInt)
+                            result.Dimension = dimInt;
+                        else if (dimension is string dimStr)
+                            result.Dimension = dimStr switch
+                            {
+                                "minecraft:overworld" or "Overworld" or "" => 0,
+                                "minecraft:the_nether" or "Nether" => -1,
+                                "minecraft:the_end" or "End" => 1,
+                                _ => 0
+                            };
                     }
                 }
-                catch { }
             }
         }
         catch (Exception ex)
@@ -481,123 +547,6 @@ public class SaveTrackingService
             App.LogError($"读取存档信息失败：{savePath}", ex);
         }
         
-        return result;
-    }
-    
-    private Dictionary<string, object> ParseNBT(FileStream fs)
-    {
-        var result = new Dictionary<string, object>();
-        try
-        {
-            using var reader = new BinaryReader(fs, Encoding.UTF8, true);
-            
-            byte tagType = reader.ReadByte();
-            if (tagType == 10)
-            {
-                ushort nameLength = reader.ReadUInt16();
-                byte[] nameBytes = reader.ReadBytes(nameLength);
-                
-                var compound = ReadCompound(reader);
-                foreach (var kvp in compound)
-                {
-                    result[kvp.Key] = kvp.Value;
-                }
-            }
-        }
-        catch
-        {
-        }
-        
-        return result;
-    }
-    
-    private Dictionary<string, object> ReadCompound(BinaryReader reader)
-    {
-        var result = new Dictionary<string, object>();
-        
-        while (true)
-        {
-            byte tagType = reader.ReadByte();
-            if (tagType == 0)
-                break;
-            
-            ushort nameLength = reader.ReadUInt16();
-            byte[] nameBytes = reader.ReadBytes(nameLength);
-            string name = Encoding.UTF8.GetString(nameBytes);
-            
-            object value = ReadTag(reader, tagType);
-            result[name] = value;
-        }
-        
-        return result;
-    }
-    
-    private object ReadTag(BinaryReader reader, byte tagType)
-    {
-        return tagType switch
-        {
-            1 => reader.ReadByte(),
-            2 => reader.ReadInt16(),
-            3 => reader.ReadInt32(),
-            4 => reader.ReadInt64(),
-            5 => reader.ReadSingle(),
-            6 => reader.ReadDouble(),
-            7 => ReadByteArray(reader),
-            8 => ReadString(reader),
-            9 => ReadList(reader),
-            10 => ReadCompound(reader),
-            11 => ReadIntArray(reader),
-            12 => ReadLongArray(reader),
-            _ => new object()
-        };
-    }
-    
-    private byte[] ReadByteArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        return reader.ReadBytes(length);
-    }
-    
-    private string ReadString(BinaryReader reader)
-    {
-        ushort length = reader.ReadUInt16();
-        byte[] bytes = reader.ReadBytes(length);
-        return Encoding.UTF8.GetString(bytes);
-    }
-    
-    private List<object> ReadList(BinaryReader reader)
-    {
-        var list = new List<object>();
-        byte listType = reader.ReadByte();
-        int length = reader.ReadInt32();
-        
-        for (int i = 0; i < length; i++)
-        {
-            list.Add(ReadTag(reader, listType));
-        }
-        
-        return list;
-    }
-    
-    private int[] ReadIntArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        var result = new int[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i] = reader.ReadInt32();
-        }
-        return result;
-    }
-    
-    private long[] ReadLongArray(BinaryReader reader)
-    {
-        int length = reader.ReadInt32();
-        var result = new long[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i] = reader.ReadInt64();
-        }
         return result;
     }
     

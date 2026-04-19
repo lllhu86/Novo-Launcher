@@ -7,31 +7,53 @@ using MinecraftLauncher.Models;
 
 namespace MinecraftLauncher.Services;
 
-public class LaunchService
+public class LaunchService : IDisposable
 {
     private readonly string _gameDir;
+    private readonly LaunchOptimizationService _optimizationService;
     private int _javaMajorVersion = 0;
+    private bool _disposed;
+
+    public event Action<string>? OptimizationProgress;
 
     public LaunchService(string gameDir)
     {
         _gameDir = gameDir;
+        _optimizationService = new LaunchOptimizationService(gameDir);
+        _optimizationService.OptimizationProgress += msg => OptimizationProgress?.Invoke(msg);
     }
 
     public Process? LaunchGame(VersionDetail version, Account account, string? javaPath = null, string? worldName = null)
     {
+        var stopwatch = Stopwatch.StartNew();
         App.LogInfo($"正在准备启动版本：{version.Id}");
         
         if (version.MainClass == null)
             throw new Exception("无法找到主类");
 
-        var java = FindJava(javaPath);
+        var settings = LauncherSettings.Instance;
+        var effectiveJavaPath = !string.IsNullOrWhiteSpace(settings.JavaPath) && File.Exists(settings.JavaPath)
+            ? settings.JavaPath
+            : javaPath;
+
+        var java = FindJava(effectiveJavaPath);
         if (java == null)
         {
             App.LogError("未找到 Java 运行时");
             throw new Exception("未找到 Java 运行时，请确保已安装 Java 并配置环境变量");
         }
         
-        _javaMajorVersion = GetJavaMajorVersion(java);
+        var cachedVersion = _optimizationService.GetCachedJavaVersion(java);
+        if (cachedVersion.HasValue)
+        {
+            _javaMajorVersion = cachedVersion.Value;
+        }
+        else
+        {
+            _javaMajorVersion = GetJavaMajorVersion(java);
+            _optimizationService.CacheJavaVersion(java, _javaMajorVersion);
+        }
+        
         App.LogInfo($"检测到 Java 版本: {_javaMajorVersion}");
         App.LogInfo($"找到 Java: {java}");
 
@@ -41,8 +63,12 @@ public class LaunchService
         var librariesDir = Path.Combine(baseGameDir, "libraries");
         var nativesDir = Path.Combine(versionDir, "natives");
         
-        // 版本隔离：每个版本有独立的游戏目录
-        var isolatedGameDir = versionDir;
+        var isolatedGameDir = settings.IsolationMode switch
+        {
+            "none" => baseGameDir,
+            "all" => versionDir,
+            _ => versionDir
+        };
 
         if (!File.Exists(clientJar))
         {
@@ -50,15 +76,36 @@ public class LaunchService
             throw new Exception($"客户端文件不存在：{clientJar}");
         }
 
-        App.LogInfo("正在解压 natives 文件...");
-        ExtractNatives(version, librariesDir, nativesDir);
+        if (_optimizationService.ShouldExtractNatives(version.Id ?? "unknown", librariesDir))
+        {
+            ExtractNatives(version, librariesDir, nativesDir);
+            _optimizationService.MarkNativesExtracted(version.Id ?? "unknown", librariesDir);
+        }
 
-        var classpath = BuildClasspath(version, librariesDir, clientJar);
+        var classpath = _optimizationService.GetCachedClasspath(version.Id ?? "unknown", librariesDir, clientJar);
+        if (classpath == null)
+        {
+            classpath = BuildClasspath(version, librariesDir, clientJar);
+            _optimizationService.CacheClasspath(version.Id ?? "unknown", classpath);
+        }
+        
         var jvmArgs = BuildJvmArgs(version, nativesDir, account, isolatedGameDir, classpath);
         var gameArgs = BuildGameArgs(version, account, isolatedGameDir, classpath, worldName);
 
-        var fullArgs = $"{jvmArgs} {version.MainClass} {gameArgs}";
+        var fullArgs = $"{jvmArgs} -cp \"{classpath}\" {version.MainClass} {gameArgs}";
         App.LogInfo($"启动参数: {fullArgs}");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _optimizationService.PreloadCriticalFilesAsync(version.Id ?? "unknown", librariesDir, clientJar);
+            }
+            catch (Exception ex)
+            {
+                App.LogError("预加载文件失败", ex);
+            }
+        });
 
         var startInfo = new ProcessStartInfo
         {
@@ -92,7 +139,11 @@ public class LaunchService
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        App.LogInfo($"游戏进程已启动 (PID: {process.Id})");
+        stopwatch.Stop();
+        var launchTime = stopwatch.Elapsed.TotalSeconds;
+        _optimizationService.RecordLaunchTime(launchTime);
+        
+        App.LogInfo($"游戏进程已启动 (PID: {process.Id}, 启动耗时: {launchTime:F2}秒)");
         return process;
     }
 
@@ -104,17 +155,21 @@ public class LaunchService
             {
                 Directory.Delete(nativesDir, true);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                App.LogError($"删除旧的 natives 目录失败: {nativesDir}", ex);
+            }
         }
         Directory.CreateDirectory(nativesDir);
 
         if (version.Libraries == null) return;
 
+        var nativeFiles = new List<(string SourcePath, string EntryName)>();
+
         foreach (var library in version.Libraries)
         {
             if (!IsNativesLibrary(library)) continue;
 
-            // 处理所有 natives 变体
             var classifiers = library.Downloads?.Classifiers;
             if (classifiers == null) continue;
 
@@ -134,7 +189,6 @@ public class LaunchService
                 var nativePath = Path.Combine(librariesDir, natives.Path.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(nativePath))
                 {
-                    App.LogInfo($"库文件缺失: {nativePath}");
                     continue;
                 }
 
@@ -148,18 +202,48 @@ public class LaunchService
                             entry.FullName.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase) ||
                             entry.FullName.EndsWith(".jnilib", StringComparison.OrdinalIgnoreCase))
                         {
-                            var destPath = Path.Combine(nativesDir, entry.Name);
-                            entry.ExtractToFile(destPath, true);
-                            App.LogInfo($"解压: {entry.Name}");
+                            nativeFiles.Add((nativePath, entry.FullName));
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    App.LogError($"解压 natives 失败: {nativePath}", ex);
+                    App.LogError($"读取 natives 文件失败: {nativePath}", ex);
                 }
             }
         }
+
+        if (nativeFiles.Count == 0) return;
+
+        App.LogInfo($"开始并行解压 {nativeFiles.Count} 个 natives 文件...");
+        
+        var extractedCount = 0;
+        var lockObj = new object();
+
+        Parallel.ForEach(nativeFiles, new ParallelOptions { MaxDegreeOfParallelism = 4 }, file =>
+        {
+            try
+            {
+                using var archive = ZipFile.OpenRead(file.SourcePath);
+                var entry = archive.GetEntry(file.EntryName);
+                if (entry != null)
+                {
+                    var destPath = Path.Combine(nativesDir, entry.Name);
+                    entry.ExtractToFile(destPath, true);
+                    
+                    lock (lockObj)
+                    {
+                        extractedCount++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                App.LogError($"解压 natives 失败: {file.EntryName}", ex);
+            }
+        });
+
+        App.LogInfo($"natives 解压完成，共 {extractedCount} 个文件");
     }
 
     private bool IsNativesLibrary(Library library)
@@ -293,23 +377,55 @@ public class LaunchService
 
     private string BuildJvmArgs(VersionDetail version, string nativesDir, Account account, string isolatedGameDir, string classpath)
     {
+        var settings = LauncherSettings.Instance;
+        var memoryMB = settings.GetEffectiveMemoryMB();
+        var minMemoryMB = Math.Max(512, memoryMB / 2);
+
         var args = new List<string>
         {
-            "-Xmx2G",
-            "-Xms512M",
+            $"-Xmx{memoryMB}M",
+            $"-Xms{minMemoryMB}M",
             $"-Djava.library.path=\"{nativesDir}\"",
             "-Dminecraft.launcher.brand=Novo-Launcher",
             "-Dminecraft.launcher.version=1.0",
             $"-Dos.name=\"Windows 10\"",
-            "-Dos.version=10.0"
+            "-Dos.version=10.0",
+            
+            "-XX:+UseG1GC",
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:G1NewSizePercent=20",
+            "-XX:G1ReservePercent=20",
+            "-XX:MaxGCPauseMillis=50",
+            "-XX:G1HeapRegionSize=32M",
+            
+            "-XX:+TieredCompilation",
+            "-XX:TieredStopAtLevel=1",
+            "-XX:CICompilerCount=2",
+            
+            "-XX:+UseStringDeduplication",
+            "-XX:+OptimizeStringConcat",
+            "-XX:+UseCompressedClassPointers",
+            "-XX:+UseCompressedOops",
+            
+            "-XX:+AlwaysPreTouch",
+            "-XX:+ParallelRefProcEnabled",
+            
+            "-Dfile.encoding=UTF-8",
+            "-Dsun.stdout.encoding=UTF-8",
+            "-Dsun.stderr.encoding=UTF-8"
         };
-        
-        args.Add("-XX:+UseG1GC");
-        args.Add("-XX:+UnlockExperimentalVMOptions");
-        args.Add("-XX:G1NewSizePercent=20");
-        args.Add("-XX:G1ReservePercent=20");
-        args.Add("-XX:MaxGCPauseMillis=50");
-        args.Add("-XX:G1HeapRegionSize=32M");
+
+        if (!string.IsNullOrWhiteSpace(settings.JavaArgs))
+        {
+            var customArgs = settings.JavaArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var customArg in customArgs)
+            {
+                if (!args.Contains(customArg))
+                {
+                    args.Add(customArg);
+                }
+            }
+        }
 
         if (version.Arguments?.Jvm != null)
         {
@@ -455,9 +571,10 @@ public class LaunchService
             var mcVersion = GetMinecraftMajorVersion(version.Id);
             if (mcVersion >= 20)
             {
+                var escapedWorldName = worldName.Replace("\\", "\\\\").Replace("\"", "\\\"");
                 args.Add("--quickPlaySingleplayer");
-                args.Add($"\"{worldName}\"");
-                App.LogInfo($"将直接加载存档 (QuickPlay): {worldName}");
+                args.Add($"\"{escapedWorldName}\"");
+                App.LogInfo($"将直接加载存档 (QuickPlay): {escapedWorldName}");
             }
             else
             {
@@ -491,5 +608,24 @@ public class LaunchService
             .Replace("${classpath_separator}", Path.PathSeparator.ToString())
             .Replace("${clientid}", "")
             .Replace("${auth_xuid}", "");
+    }
+
+    public LaunchStatistics GetLaunchStatistics()
+    {
+        return _optimizationService.GetStatistics();
+    }
+
+    public void ClearOptimizationCache()
+    {
+        _optimizationService.ClearCache();
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            _optimizationService.Dispose();
+        }
     }
 }

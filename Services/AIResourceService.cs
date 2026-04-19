@@ -176,7 +176,12 @@ namespace MinecraftLauncher.Services
             
             try
             {
-                var url = $"https://api.modrinth.com/v2/search?query={Uri.EscapeDataString(query)}&limit={limit}&facets=[[\"project_type:mod\"]]";
+                var url = $"https://api.modrinth.com/v2/search?query={Uri.EscapeDataString(query + " map")}&limit={limit}&facets=[[\"project_type:modpack\"]]";
+                
+                if (!string.IsNullOrEmpty(gameVersion))
+                {
+                    url += $"&facets=[[\"versions:{gameVersion}\"]]";
+                }
                 
                 var response = await _httpClient.GetStringAsync(url);
                 var json = JsonDocument.Parse(response);
@@ -184,22 +189,18 @@ namespace MinecraftLauncher.Services
 
                 foreach (var hit in hits.EnumerateArray())
                 {
-                    var title = hit.GetProperty("title").GetString() ?? "";
-                    if (title.ToLower().Contains("map") || title.ToLower().Contains("地图"))
+                    results.Add(new ResourceSearchResult
                     {
-                        results.Add(new ResourceSearchResult
-                        {
-                            Name = title,
-                            Description = hit.GetProperty("description").GetString() ?? "",
-                            Author = hit.GetProperty("author").GetString() ?? "",
-                            Downloads = hit.GetProperty("downloads").GetInt32(),
-                            Version = "",
-                            DownloadUrl = "",
-                            ResourceType = "map",
-                            GameVersion = gameVersion ?? "",
-                            IconUrl = hit.TryGetProperty("icon_url", out var iconUrl) ? iconUrl.GetString() ?? "" : ""
-                        });
-                    }
+                        Name = hit.GetProperty("title").GetString() ?? "",
+                        Description = hit.GetProperty("description").GetString() ?? "",
+                        Author = hit.GetProperty("author").GetString() ?? "",
+                        Downloads = hit.GetProperty("downloads").GetInt32(),
+                        Version = "",
+                        DownloadUrl = "",
+                        ResourceType = "map",
+                        GameVersion = gameVersion ?? "",
+                        IconUrl = hit.TryGetProperty("icon_url", out var iconUrl) ? iconUrl.GetString() ?? "" : ""
+                    });
                 }
             }
             catch (Exception ex)
@@ -307,7 +308,27 @@ namespace MinecraftLauncher.Services
                     Directory.CreateDirectory(shaderpacksDir);
                 }
 
-                App.LogInfo($"[AI助手] 光影包将下载到: {shaderpacksDir}");
+                if (string.IsNullOrEmpty(resource.DownloadUrl))
+                {
+                    App.LogError($"[AI助手] 光影包缺少下载链接: {resource.Name}");
+                    App.LogInfo($"[AI助手] 请手动从 Modrinth 下载光影包到: {shaderpacksDir}");
+                    return false;
+                }
+
+                var fileName = $"{resource.Name}.zip";
+                var savePath = Path.Combine(shaderpacksDir, fileName);
+                
+                App.LogInfo($"[AI助手] 开始下载光影包: {resource.Name}");
+                
+                var response = await _httpClient.GetAsync(resource.DownloadUrl);
+                response.EnsureSuccessStatusCode();
+                
+                using (var fs = new FileStream(savePath, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
+                }
+                
+                App.LogInfo($"[AI助手] 光影包下载完成: {savePath}");
                 return true;
             }
             catch (Exception ex)
@@ -327,7 +348,27 @@ namespace MinecraftLauncher.Services
                     Directory.CreateDirectory(resourcepacksDir);
                 }
 
-                App.LogInfo($"[AI助手] 资源包将下载到: {resourcepacksDir}");
+                if (string.IsNullOrEmpty(resource.DownloadUrl))
+                {
+                    App.LogError($"[AI助手] 资源包缺少下载链接: {resource.Name}");
+                    App.LogInfo($"[AI助手] 请手动从 Modrinth 下载资源包到: {resourcepacksDir}");
+                    return false;
+                }
+
+                var fileName = $"{resource.Name}.zip";
+                var savePath = Path.Combine(resourcepacksDir, fileName);
+                
+                App.LogInfo($"[AI助手] 开始下载资源包: {resource.Name}");
+                
+                var response = await _httpClient.GetAsync(resource.DownloadUrl);
+                response.EnsureSuccessStatusCode();
+                
+                using (var fs = new FileStream(savePath, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
+                }
+                
+                App.LogInfo($"[AI助手] 资源包下载完成: {savePath}");
                 return true;
             }
             catch (Exception ex)
@@ -347,7 +388,52 @@ namespace MinecraftLauncher.Services
                     Directory.CreateDirectory(savesDir);
                 }
 
-                App.LogInfo($"[AI助手] 地图将解压到: {savesDir}");
+                if (string.IsNullOrEmpty(resource.DownloadUrl))
+                {
+                    App.LogError($"[AI助手] 地图缺少下载链接: {resource.Name}");
+                    App.LogInfo($"[AI助手] 请手动从 Modrinth 下载地图到: {savesDir}");
+                    return false;
+                }
+
+                var tempFile = Path.Combine(Path.GetTempPath(), $"{resource.Name}.zip");
+                
+                App.LogInfo($"[AI助手] 开始下载地图: {resource.Name}");
+                
+                var response = await _httpClient.GetAsync(resource.DownloadUrl);
+                response.EnsureSuccessStatusCode();
+                
+                using (var fs = new FileStream(tempFile, FileMode.Create))
+                {
+                    await response.Content.CopyToAsync(fs);
+                }
+                
+                App.LogInfo($"[AI助手] 开始解压地图到: {savesDir}");
+                
+                using (var archive = ZipFile.OpenRead(tempFile))
+                {
+                    var topLevelDir = archive.Entries[0].FullName.Split('/')[0];
+                    var extractPath = Path.Combine(savesDir, resource.Name);
+                    
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name))
+                            continue;
+                        
+                        var relativePath = entry.FullName.Substring(topLevelDir.Length).TrimStart('/');
+                        var destPath = Path.Combine(extractPath, relativePath);
+                        var destDir = Path.GetDirectoryName(destPath);
+                        
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
+                        
+                        entry.ExtractToFile(destPath, true);
+                    }
+                }
+                
+                File.Delete(tempFile);
+                App.LogInfo($"[AI助手] 地图安装完成: {resource.Name}");
                 return true;
             }
             catch (Exception ex)
@@ -363,6 +449,7 @@ namespace MinecraftLauncher.Services
             {
                 _disposed = true;
                 _httpClient.Dispose();
+                _modService?.Dispose();
             }
         }
     }

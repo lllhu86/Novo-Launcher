@@ -80,35 +80,7 @@ public class P2PService : IDisposable
             throw new InvalidOperationException("已有连接正在进行");
         }
 
-        _isConnecting = true;
-        _isHost = true;
-        _settings = settings;
-        _cancellationTokenSource = new CancellationTokenSource();
-
-        try
-        {
-            ConnectionStateChanged?.Invoke("正在连接信令服务器...");
-            await _signalingClient.ConnectAsync(settings.SignalingServerUrl, _cancellationTokenSource.Token);
-
-            _peerId = GeneratePeerId();
-
-            var port = await _localProxy.StartAsync(settings.LocalProxyPort, _cancellationTokenSource.Token);
-
-            var createMessage = new SignalingMessage
-            {
-                Type = "create_room",
-                PeerId = _peerId,
-                RoomName = roomName
-            };
-            await _signalingClient.SendMessageAsync(createMessage);
-
-            ConnectionStateChanged?.Invoke("等待其他玩家加入...");
-        }
-        catch (Exception)
-        {
-            _isConnecting = false;
-            throw;
-        }
+        throw new NotImplementedException("P2P 联机功能正在开发中，WebRTC 数据通道尚未集成。后续版本将支持此功能。");
     }
 
     public async Task JoinRoomAsync(string roomId, P2PSettings settings)
@@ -118,36 +90,7 @@ public class P2PService : IDisposable
             throw new InvalidOperationException("已有连接正在进行");
         }
 
-        _isConnecting = true;
-        _isHost = false;
-        _settings = settings;
-        _cancellationTokenSource = new CancellationTokenSource();
-
-        try
-        {
-            ConnectionStateChanged?.Invoke("正在连接信令服务器...");
-            await _signalingClient.ConnectAsync(settings.SignalingServerUrl, _cancellationTokenSource.Token);
-
-            _peerId = GeneratePeerId();
-            _currentRoomId = roomId;
-
-            var port = await _localProxy.StartAsync(settings.LocalProxyPort, _cancellationTokenSource.Token);
-
-            var joinMessage = new SignalingMessage
-            {
-                Type = "join_room",
-                PeerId = _peerId,
-                RoomId = roomId
-            };
-            await _signalingClient.SendMessageAsync(joinMessage);
-
-            ConnectionStateChanged?.Invoke("正在建立 P2P 连接...");
-        }
-        catch (Exception)
-        {
-            _isConnecting = false;
-            throw;
-        }
+        throw new NotImplementedException("P2P 联机功能正在开发中，WebRTC 数据通道尚未集成。后续版本将支持此功能。");
     }
 
     public async Task DisconnectAsync()

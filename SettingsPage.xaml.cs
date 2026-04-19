@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Navigation;
 using System.Windows.Threading;
+using MinecraftLauncher.Services;
 using Microsoft.Win32;
 
 namespace MinecraftLauncher;
@@ -210,13 +211,13 @@ public partial class SettingsPage : Page
         int selectedIndex = IsolationComboBox.SelectedIndex;
         string info = selectedIndex switch
         {
-            0 => "❌ 不开启版本隔离\n\n所有版本共享同一个 mods、saves、config 等文件夹。\n\n⚠️ 风险：可能导致不同版本的 mod 冲突，需要在设置中手动禁用不支持的 mod。",
+            0 => " 不开启版本隔离\n\n所有版本共享同一个 mods、saves、config 等文件夹。\n\n 风险：可能导致不同版本的 mod 冲突，需要在设置中手动禁用不支持的 mod。",
             
-            1 => "✅ 隔离可安装 mod 的版本与非正式版（推荐）\n\n• 正式版本之间共享地图、材质、光影等资源\n• 非正式版（快照、预览版等）独立隔离\n• 可以安装 mod 的版本独立隔离\n\n✨ 优点：兼顾 mod 隔离和资源互通，方便管理。",
+            1 => " 隔离可安装 mod 的版本与非正式版（推荐）\n\n• 正式版本之间共享地图、材质、光影等资源\n• 非正式版（快照、预览版等）独立隔离\n• 可以安装 mod 的版本独立隔离\n\n[优点] 兼顾 mod 隔离和资源互通，方便管理。",
             
-            2 => "🔒 隔离所有版本\n\n• 每个版本都有独立的 mods、saves、config 等文件夹\n• 完全隔离，互不影响\n\n✨ 优点：最安全，不会有任何版本冲突问题。\n⚠️ 缺点：地图、资源包等无法在不同版本间共享。",
+            2 => " 隔离所有版本\n\n• 每个版本都有独立的 mods、saves、config 等文件夹\n• 完全隔离，互不影响\n\n 优点：最安全，不会有任何版本冲突问题。\n[注意] 缺点：地图、资源包等无法在不同版本间共享。",
             
-            3 => "🔧 自定义模式\n\n• 可以手动指定每个版本的独立文件夹\n• 灵活配置需要隔离的内容\n\n✨ 优点：最灵活，可以根据需求定制隔离策略。",
+            3 => " 自定义模式\n\n• 可以手动指定每个版本的独立文件夹\n• 灵活配置需要隔离的内容\n\n 优点：最灵活，可以根据需求定制隔离策略。",
             
             _ => "请选择版本隔离模式"
         };
@@ -285,6 +286,8 @@ public partial class SettingsPage : Page
             _ => "mod_dev"
         };
 
+        var settings = LauncherSettings.Instance;
+        settings.IsolationMode = isolationMode;
         App.LogInfo($"版本隔离设置：{isolationMode}");
     }
 
@@ -294,6 +297,10 @@ public partial class SettingsPage : Page
         int customMemory = (int)MemorySlider.Value;
         bool optimizeMemory = OptimizeMemoryCheck.IsChecked == true;
         
+        var settings = LauncherSettings.Instance;
+        settings.IsAutoMemory = isAutoMemory;
+        settings.CustomMemoryMB = customMemory;
+        settings.OptimizeMemory = optimizeMemory;
         App.LogInfo($"内存设置：{(isAutoMemory ? "自动" : $"自定义 {customMemory}MB")}");
         App.LogInfo($"内存优化：{optimizeMemory}");
     }
@@ -310,6 +317,9 @@ public partial class SettingsPage : Page
         else if (CustomSkinRadio.IsChecked == true)
             skinType = "official";
         
+        var settings = LauncherSettings.Instance;
+        settings.SkinType = skinType;
+        settings.CustomSkinPath = customSkinPath;
         App.LogInfo($"离线皮肤设置：{skinType}");
     }
     
@@ -341,6 +351,15 @@ public partial class SettingsPage : Page
         bool disableJavaWrapper = DisableJavaWrapperCheck.IsChecked == true;
         bool useDedicatedGPU = UseDedicatedGPUCheck.IsChecked == true;
         bool useMultiThreadDownload = DownloadModeComboBox.SelectedIndex == 1;
+        
+        var settings = LauncherSettings.Instance;
+        settings.JavaArgs = javaArgs;
+        settings.GameArgs = gameArgs;
+        settings.PreLaunchCommand = preLaunchCommand;
+        settings.DisableJavaWrapper = disableJavaWrapper;
+        settings.UseDedicatedGPU = useDedicatedGPU;
+        settings.UseMultiThreadDownload = useMultiThreadDownload;
+        settings.Save();
         
         App.LogInfo($"Java 参数：{javaArgs}");
         App.LogInfo($"游戏参数：{gameArgs}");

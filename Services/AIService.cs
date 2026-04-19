@@ -34,12 +34,16 @@ public class AIService : IDisposable
     {
     }
 
+    private readonly string _conversationFilePath;
+    private readonly int _maxPersistedMessages = 50;
+
     public AIService(string gameDir)
     {
         _gameDir = gameDir;
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
         _config = LoadConfig();
-        _conversationHistory = new List<ChatMessage>();
+        _conversationHistory = LoadConversationHistory();
+        _conversationFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ai_conversation.json");
         _hardwareService = new HardwareService();
         _launcherDataService = new LauncherDataService(gameDir);
         _logMonitorService = new GameLogMonitorService();
@@ -82,7 +86,12 @@ public class AIService : IDisposable
             try
             {
                 var json = File.ReadAllText(configPath);
-                return JsonConvert.DeserializeObject<AIConfig>(json) ?? new AIConfig();
+                var config = JsonConvert.DeserializeObject<AIConfig>(json) ?? new AIConfig();
+                if (!string.IsNullOrEmpty(config.ApiKey))
+                {
+                    config.ApiKey = DataProtectionHelper.Unprotect(config.ApiKey);
+                }
+                return config;
             }
             catch
             {
@@ -94,8 +103,21 @@ public class AIService : IDisposable
 
     public void SaveConfig(AIConfig config)
     {
+        var configToSave = new AIConfig
+        {
+            ApiKey = !string.IsNullOrEmpty(config.ApiKey) ? DataProtectionHelper.Protect(config.ApiKey) : "",
+            ApiEndpoint = config.ApiEndpoint,
+            Model = config.Model,
+            MaxTokens = config.MaxTokens,
+            Temperature = config.Temperature,
+            MaxHistoryMessages = config.MaxHistoryMessages,
+            SendHardwareInfo = config.SendHardwareInfo,
+            EnableAutoDiagnosis = config.EnableAutoDiagnosis,
+            EnableProactiveSuggestions = config.EnableProactiveSuggestions
+        };
+
         var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ai_config.json");
-        var json = JsonConvert.SerializeObject(config, Formatting.Indented);
+        var json = JsonConvert.SerializeObject(configToSave, Formatting.Indented);
         File.WriteAllText(configPath, json);
         
         _config.ApiKey = config.ApiKey;
@@ -126,7 +148,7 @@ public class AIService : IDisposable
     {
         if (!IsConfigured)
         {
-            return "⚠️ 请先配置 API Key。点击右上角「设置」按钮，输入您的 API Key。";
+            return "[提示] 请先配置 API Key。点击右上角「设置」按钮，输入您的 API Key。";
         }
 
         _conversationHistory.Add(new ChatMessage
@@ -173,7 +195,7 @@ public class AIService : IDisposable
                 var errorObj = JsonConvert.DeserializeObject<dynamic>(responseJson);
                 var errorMessage = errorObj?.error?.message?.ToString() ?? "未知错误";
                 _conversationHistory.RemoveAt(_conversationHistory.Count - 1);
-                return $"❌ API 错误: {errorMessage}";
+                return $"[API错误] {errorMessage}";
             }
 
             var completion = JsonConvert.DeserializeObject<dynamic>(responseJson);
@@ -186,22 +208,24 @@ public class AIService : IDisposable
                 Timestamp = DateTime.Now
             });
 
+            SaveConversationHistory();
+
             return assistantMessage;
         }
         catch (HttpRequestException ex)
         {
             _conversationHistory.RemoveAt(_conversationHistory.Count - 1);
-            return $"❌ 网络错误: {ex.Message}";
+            return $"[网络错误] {ex.Message}";
         }
         catch (TaskCanceledException)
         {
             _conversationHistory.RemoveAt(_conversationHistory.Count - 1);
-            return "⏱️ 请求超时，请重试。";
+            return "[超时] 请求超时，请重试。";
         }
         catch (Exception ex)
         {
             _conversationHistory.RemoveAt(_conversationHistory.Count - 1);
-            return $"❌ 错误: {ex.Message}";
+            return $"[错误] {ex.Message}";
         }
     }
 
@@ -287,10 +311,10 @@ public class AIService : IDisposable
         sb.AppendLine(@$"
 【问题排查流程】
 当玩家遇到问题时，请遵循以下流程：
-1. 诊断 → 提取错误关键词（如 Exit Code 1、Missing Mod Dependency、Java Heap Space）
-2. 定位 → 指出具体原因（例如：「模组『机械动力』需要Flywheel渲染库，但未安装或版本过低。」）
-3. 给出方案 → 提供自动修复或手动引导选项
-4. 验证 → 修复后建议玩家重试启动，并持续观察是否出现新问题
+1. 诊断 -> 提取错误关键词（如 Exit Code 1、Missing Mod Dependency、Java Heap Space）
+2. 定位 -> 指出具体原因（例如：「模组『机械动力』需要Flywheel渲染库，但未安装或版本过低。」）
+3. 给出方案 -> 提供自动修复或手动引导选项
+4. 验证 -> 修复后建议玩家重试启动，并持续观察是否出现新问题
 
 请用简洁、友好的中文回答问题。");
 
@@ -308,10 +332,45 @@ public class AIService : IDisposable
     public void ClearConversation()
     {
         _conversationHistory.Clear();
+        SaveConversationHistory();
         ConversationCleared?.Invoke();
     }
 
     public List<ChatMessage> GetConversationHistory() => _conversationHistory.ToList();
+
+    private List<ChatMessage> LoadConversationHistory()
+    {
+        var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ai_conversation.json");
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                var json = File.ReadAllText(filePath);
+                var messages = JsonConvert.DeserializeObject<List<ChatMessage>>(json);
+                if (messages != null)
+                {
+                    return messages.TakeLast(_maxPersistedMessages).ToList();
+                }
+            }
+        }
+        catch
+        {
+        }
+        return new List<ChatMessage>();
+    }
+
+    private void SaveConversationHistory()
+    {
+        try
+        {
+            var messagesToSave = _conversationHistory.TakeLast(_maxPersistedMessages).ToList();
+            var json = JsonConvert.SerializeObject(messagesToSave, Formatting.Indented);
+            File.WriteAllText(_conversationFilePath, json);
+        }
+        catch
+        {
+        }
+    }
 
     #region 游戏监控
 
@@ -345,7 +404,7 @@ public class AIService : IDisposable
     {
         if (!IsConfigured)
         {
-            return "⚠️ 请先配置 API Key 才能使用日志分析功能。";
+            return "[提示] 请先配置 API Key 才能使用日志分析功能。";
         }
 
         var prompt = $@"请分析以下 Minecraft 游戏日志，找出错误原因并给出解决方案。
@@ -354,10 +413,10 @@ public class AIService : IDisposable
 {logContent}
 
 请按以下格式回答：
-1. 🔍 错误诊断：简要说明发生了什么错误
-2. 🎯 根本原因：解释为什么会出现这个错误
-3. 💡 解决方案：给出具体的修复步骤
-4. ⚠️ 注意事项：如果有需要特别注意的地方请说明";
+1. [错误诊断] 简要说明发生了什么错误
+2. [根本原因] 解释为什么会出现这个错误
+3. [解决方案] 给出具体的修复步骤
+4. [注意事项] 如果有需要特别注意的地方请说明";
 
         return await SendMessageAsync(prompt);
     }
@@ -416,7 +475,7 @@ public class AIService : IDisposable
 
         recommendation.JvmArgs = GenerateJvmArgs(recommendation.RecommendedMemoryMB, hardware.CpuCores);
         
-        recommendation.Explanation = $"💎 基于您的硬件配置（{hardware.CpuName}，{hardware.TotalMemoryGB:F1}GB 内存，{hardware.GpuName}），" +
+        recommendation.Explanation = $"[推荐] 基于您的硬件配置（{hardware.CpuName}，{hardware.TotalMemoryGB:F1}GB 内存，{hardware.GpuName}），" +
             $"推荐分配 {recommendation.RecommendedMemoryMB / 1024.0:F1}GB 内存给游戏，" +
             $"渲染距离设置为 {recommendation.RenderDistance} 区块。";
 
@@ -471,12 +530,12 @@ public class AIService : IDisposable
     public async Task<string> GetQuickDiagnosisAsync(string version)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("🔍 正在进行快速诊断...\n");
+        sb.AppendLine("[诊断] 正在进行快速诊断...\n");
 
         var conflicts = _launcherDataService.DetectModConflicts(version);
         if (conflicts.Count > 0)
         {
-            sb.AppendLine("⚠️ 检测到模组问题：");
+            sb.AppendLine("[警告] 检测到模组问题：");
             foreach (var conflict in conflicts)
             {
                 sb.AppendLine($"  • {conflict.ConflictType}: {conflict.Description}");
@@ -485,13 +544,13 @@ public class AIService : IDisposable
         }
         else
         {
-            sb.AppendLine("✅ 未检测到模组冲突");
+            sb.AppendLine("[正常] 未检测到模组冲突");
         }
 
         var crashReport = _launcherDataService.AnalyzeGameCrash(version);
         if (crashReport != null)
         {
-            sb.AppendLine($"\n📄 检测到崩溃报告 ({crashReport.CrashTime:yyyy-MM-dd HH:mm})：");
+            sb.AppendLine($"\n💥 检测到崩溃报告 ({crashReport.CrashTime:yyyy-MM-dd HH:mm})：");
             sb.AppendLine($"  类型: {crashReport.ErrorType}");
             sb.AppendLine($"  建议: {crashReport.SuggestedFix}");
         }
@@ -499,7 +558,7 @@ public class AIService : IDisposable
         var logInfo = _launcherDataService.GetLatestLauncherLog();
         if (logInfo.ErrorCount > 0)
         {
-            sb.AppendLine($"\n❌ 启动器日志中有 {logInfo.ErrorCount} 个错误");
+            sb.AppendLine($"\n[错误] 启动器日志中有 {logInfo.ErrorCount} 个错误");
         }
 
         return sb.ToString();
@@ -512,37 +571,37 @@ public class AIService : IDisposable
         
         if (save == null)
         {
-            return $"❌ 未找到存档: {saveName}";
+            return $"[错误] 未找到存档: {saveName}";
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"📊 存档分析报告：{save.DisplayName}\n");
-        sb.AppendLine($"📁 路径: {save.Path}");
-        sb.AppendLine($"🎮 版本: {save.Version}");
-        sb.AppendLine($"📏 大小: {save.SizeDisplay}");
-        sb.AppendLine($"🕐 最后游玩: {save.DisplayLastPlayed}");
-        sb.AppendLine($"🎯 游戏模式: {save.GameMode}");
-        sb.AppendLine($"⚔️ 难度: {save.Difficulty}");
-        sb.AppendLine($"🌍 世界类型: {save.WorldType}");
+        sb.AppendLine($"[存档分析] {save.DisplayName}\n");
+        sb.AppendLine($"[路径] {save.Path}");
+        sb.AppendLine($"[版本] {save.Version}");
+        sb.AppendLine($"[大小] {save.SizeDisplay}");
+        sb.AppendLine($"[最后游玩] {save.DisplayLastPlayed}");
+        sb.AppendLine($"[游戏模式] {save.GameMode}");
+        sb.AppendLine($"[难度] {save.Difficulty}");
+        sb.AppendLine($"[世界类型] {save.WorldType}");
         
         if (!string.IsNullOrEmpty(save.Seed))
         {
-            sb.AppendLine($"🌱 种子: {save.Seed}");
+            sb.AppendLine($"[种子] {save.Seed}");
         }
         
         if (save.HasCheats)
         {
-            sb.AppendLine($"🔓 作弊: 已开启");
+            sb.AppendLine($"[作弊] 已开启");
         }
         
         if (save.DatapackCount > 0)
         {
-            sb.AppendLine($"📦 数据包: {save.DatapackCount} 个");
+            sb.AppendLine($"[数据包] {save.DatapackCount} 个");
         }
 
         if (save.SizeBytes > 500 * 1024 * 1024)
         {
-            sb.AppendLine($"\n⚠️ 存档体积较大，建议备份并使用 MCEdit 修剪未加载区块。");
+            sb.AppendLine($"\n[警告] 存档体积较大，建议备份并使用 MCEdit 修剪未加载区块。");
         }
 
         return sb.ToString();
@@ -554,24 +613,24 @@ public class AIService : IDisposable
         var conflicts = _launcherDataService.DetectModConflicts(version);
 
         var sb = new StringBuilder();
-        sb.AppendLine($"📦 模组分析报告：{version}\n");
+        sb.AppendLine($"[模组分析] {version}\n");
         sb.AppendLine($"总数: {mods.Count} 个模组\n");
 
         var enabledMods = mods.Where(m => m.Enabled).ToList();
         var disabledMods = mods.Where(m => !m.Enabled).ToList();
 
-        sb.AppendLine($"✅ 已启用: {enabledMods.Count} 个");
-        sb.AppendLine($"❌ 已禁用: {disabledMods.Count} 个\n");
+        sb.AppendLine($"[已启用] {enabledMods.Count} 个");
+        sb.AppendLine($"[已禁用] {disabledMods.Count} 个\n");
 
         var modLoaders = mods.Select(m => m.ModLoader).Distinct().ToList();
         if (modLoaders.Count > 0)
         {
-            sb.AppendLine($"🔧 模组加载器: {string.Join(", ", modLoaders)}\n");
+            sb.AppendLine($"[加载器] {string.Join(", ", modLoaders)}\n");
         }
 
         if (conflicts.Count > 0)
         {
-            sb.AppendLine("⚠️ 检测到问题：");
+            sb.AppendLine("[警告] 检测到问题：");
             foreach (var conflict in conflicts)
             {
                 sb.AppendLine($"  • [{conflict.Severity}] {conflict.Description}");
@@ -579,7 +638,7 @@ public class AIService : IDisposable
         }
         else
         {
-            sb.AppendLine("✅ 未检测到模组冲突");
+            sb.AppendLine("[正常] 未检测到模组冲突");
         }
 
         return sb.ToString();
@@ -597,40 +656,40 @@ public class AIService : IDisposable
             
             if (string.IsNullOrEmpty(query))
             {
-                return "❌ 请告诉我你想搜索什么资源。例如：「找一个 1.19 可用的光影」";
+                return "[提示] 请告诉我你想搜索什么资源。例如：「找一个 1.19 可用的光影」";
             }
 
             var results = await _resourceService.SearchResourcesAsync(resourceType, query, gameVersion, 5);
             
             if (results.Count == 0)
             {
-                return $"❌ 未找到匹配的{GetResourceTypeName(resourceType)}。";
+                return $"[结果] 未找到匹配的{GetResourceTypeName(resourceType)}。";
             }
 
-            var response = $"🔍 找到 {results.Count} 个匹配的{GetResourceTypeName(resourceType)}：\n\n";
+            var response = $"[搜索] 找到 {results.Count} 个匹配的{GetResourceTypeName(resourceType)}：\n\n";
             
             for (int i = 0; i < results.Count; i++)
             {
                 var r = results[i];
                 response += $"{i + 1}. **{r.Name}**\n";
-                response += $"   📝 {r.Description}\n";
-                response += $"   👤 作者: {r.Author}\n";
-                response += $"   📥 下载量: {r.Downloads:N0}\n";
+                response += $"   [描述] {r.Description}\n";
+                response += $"   [作者] {r.Author}\n";
+                response += $"   [下载量] {r.Downloads:N0}\n";
                 if (!string.IsNullOrEmpty(r.GameVersion))
                 {
-                    response += $"   🎮 版本: {r.GameVersion}\n";
+                    response += $"   [版本] {r.GameVersion}\n";
                 }
                 response += "\n";
             }
 
-            response += "💡 请回复编号（1-5）来安装对应的资源，或告诉我其他需求。";
+            response += "[提示] 请回复编号（1-5）来安装对应的资源，或告诉我其他需求。";
             
             return response;
         }
         catch (Exception ex)
         {
             App.LogError("搜索资源失败", ex);
-            return $"❌ 搜索失败: {ex.Message}";
+            return $"[错误] 搜索失败: {ex.Message}";
         }
     }
 
@@ -654,7 +713,7 @@ public class AIService : IDisposable
             
             if (index < 1 || index > results.Count)
             {
-                return "❌ 无效的编号，请重新选择。";
+                return "[错误] 无效的编号，请重新选择。";
             }
 
             var resource = results[index - 1];
@@ -662,17 +721,17 @@ public class AIService : IDisposable
             
             if (success)
             {
-                return $"✅ 成功安装「{resource.Name}」！\n\n资源已下载并放置到正确的目录，重启游戏即可生效。";
+                return $"[成功] 已安装「{resource.Name}」！\n\n资源已下载并放置到正确的目录，重启游戏即可生效。";
             }
             else
             {
-                return $"❌ 安装失败，请稍后重试。";
+                return $"[失败] 安装失败，请稍后重试。";
             }
         }
         catch (Exception ex)
         {
             App.LogError($"安装资源失败: {index}", ex);
-            return $"❌ 安装失败: {ex.Message}";
+            return $"[错误] 安装失败: {ex.Message}";
         }
     }
 

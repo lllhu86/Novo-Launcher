@@ -82,7 +82,8 @@ public class DownloadService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"HttpClient 初始化失败：{ex.Message}");
+            App.LogError("HttpClient 初始化失败", ex);
+            throw new InvalidOperationException("无法初始化下载服务，请检查网络配置", ex);
         }
     }
 

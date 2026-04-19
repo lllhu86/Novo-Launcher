@@ -99,7 +99,7 @@ namespace MinecraftLauncher.Services
                         alerts.Add(new ProactiveAlert
                         {
                             AlertType = "compatibility",
-                            Title = "⚠️ 模组兼容性警告",
+                            Title = "[警告] 模组兼容性问题",
                             Message = $"检测到「{versionName}」版本同时安装了 OptiFine 和 Sodium，这两个模组可能存在兼容性问题。",
                             Severity = "warning",
                             Actions = new List<AlertAction>
@@ -148,7 +148,7 @@ namespace MinecraftLauncher.Services
                     alerts.Add(new ProactiveAlert
                     {
                         AlertType = "performance",
-                        Title = "💡 性能优化建议",
+                        Title = "[建议] 性能优化",
                         Message = $"检测到您的内存容量较小（{hardware.TotalMemoryGB:F1}GB），建议关闭部分后台应用或升级内存以获得更好的游戏体验。",
                         Severity = "info",
                         Actions = new List<AlertAction>
@@ -171,7 +171,7 @@ namespace MinecraftLauncher.Services
                         alerts.Add(new ProactiveAlert
                         {
                             AlertType = "performance",
-                            Title = "💡 显存不足警告",
+                            Title = "[警告] 显存不足",
                             Message = $"检测到您的显存较小（{hardware.GpuMemory}），建议降低游戏画质设置或使用低分辨率材质包。",
                             Severity = "warning",
                             Actions = new List<AlertAction>
@@ -235,7 +235,7 @@ namespace MinecraftLauncher.Services
                         alerts.Add(new ProactiveAlert
                         {
                             AlertType = "backup",
-                            Title = "💾 备份提醒",
+                            Title = "[提醒] 备份提醒",
                             Message = $"你最近三天修改了 {recentModifiedSaves.Count} 个存档，建议立即备份以防止数据丢失。",
                             Severity = "info",
                             Actions = new List<AlertAction>

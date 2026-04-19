@@ -36,8 +36,8 @@ public class ProblemDiagnosisService
         
         await Task.Run(() =>
         {
-            result.DiagnosticSteps.Add($"🔍 检测到错误类型: {errorEvent.ErrorType}");
-            result.DiagnosticSteps.Add($"📋 错误严重程度: {errorEvent.Severity}");
+            result.DiagnosticSteps.Add($"[检测] 错误类型: {errorEvent.ErrorType}");
+            result.DiagnosticSteps.Add($"[信息] 错误严重程度: {errorEvent.Severity}");
             
             switch (errorEvent.ErrorType)
             {
@@ -80,8 +80,8 @@ public class ProblemDiagnosisService
     {
         var hardware = _hardwareService.GetHardwareInfo();
         
-        result.DiagnosticSteps.Add($"💾 系统总内存: {hardware.TotalMemoryGB:F1} GB");
-        result.DiagnosticSteps.Add($"🔧 CPU核心数: {hardware.CpuCores}");
+        result.DiagnosticSteps.Add($"[系统] 总内存: {hardware.TotalMemoryGB:F1} GB");
+        result.DiagnosticSteps.Add($"[系统] CPU核心数: {hardware.CpuCores}");
         
         var recommendedMemory = hardware.TotalMemoryGB switch
         {
@@ -141,12 +141,12 @@ public class ProblemDiagnosisService
         var mods = _dataService.GetModsForVersion(version);
         var conflicts = _dataService.DetectModConflicts(version);
         
-        result.DiagnosticSteps.Add($"📦 已安装模组数量: {mods.Count}");
+        result.DiagnosticSteps.Add($"[模组] 已安装模组数量: {mods.Count}");
         
         var missingDeps = conflicts.Where(c => c.ConflictType == "缺失依赖").ToList();
         if (missingDeps.Count > 0)
         {
-            result.DiagnosticSteps.Add($"⚠️ 检测到 {missingDeps.Count} 个缺失的依赖:");
+            result.DiagnosticSteps.Add($"[警告] 检测到 {missingDeps.Count} 个缺失的依赖:");
             foreach (var dep in missingDeps)
             {
                 result.DiagnosticSteps.Add($"   - {dep.Description}");
@@ -171,7 +171,7 @@ public class ProblemDiagnosisService
         
         if (!string.IsNullOrEmpty(errorEvent.RelatedMod))
         {
-            result.DiagnosticSteps.Add($"🎯 相关模组: {errorEvent.RelatedMod}");
+            result.DiagnosticSteps.Add($"[相关] 模组: {errorEvent.RelatedMod}");
         }
     }
     
@@ -189,7 +189,7 @@ public class ProblemDiagnosisService
         
         if (duplicates.Count > 0)
         {
-            result.DiagnosticSteps.Add($"⚠️ 检测到 {duplicates.Count} 个重复的模组:");
+            result.DiagnosticSteps.Add($"[警告] 检测到 {duplicates.Count} 个重复的模组:");
             foreach (var dup in duplicates)
             {
                 result.DiagnosticSteps.Add($"   - {dup.Description}");
@@ -225,9 +225,9 @@ public class ProblemDiagnosisService
             
             if (versionInfo != null)
             {
-                result.DiagnosticSteps.Add($"🎮 游戏版本: {version}");
-                result.DiagnosticSteps.Add($"🔧 模组加载器: {versionInfo.ModLoader}");
-                result.DiagnosticSteps.Add($"📦 已安装模组: {mods.Count} 个");
+                result.DiagnosticSteps.Add($"[游戏] 版本: {version}");
+                result.DiagnosticSteps.Add($"[游戏] 模组加载器: {versionInfo.ModLoader}");
+                result.DiagnosticSteps.Add($"[模组] 已安装模组: {mods.Count} 个");
             }
         }
         
@@ -262,13 +262,13 @@ public class ProblemDiagnosisService
         
         if (requiredJava.HasValue)
         {
-            result.DiagnosticSteps.Add($"☕ 需要的 Java 版本: {requiredJava.Value}");
+            result.DiagnosticSteps.Add($"[Java] 需要的版本: {requiredJava.Value}");
         }
         
         var installedJava = FindInstalledJavaVersions();
         if (installedJava.Count > 0)
         {
-            result.DiagnosticSteps.Add($"☕ 已安装的 Java 版本: {string.Join(", ", installedJava)}");
+            result.DiagnosticSteps.Add($"[Java] 已安装的版本: {string.Join(", ", installedJava)}");
         }
         
         result.RootCause = "Java 版本不兼容，游戏需要特定版本的 Java 运行时。";
@@ -296,7 +296,7 @@ public class ProblemDiagnosisService
         
         if (errorEvent.ExitCode > 0)
         {
-            result.DiagnosticSteps.Add($"🚪 退出码: {errorEvent.ExitCode}");
+            result.DiagnosticSteps.Add($"[退出] 退出码: {errorEvent.ExitCode}");
             
             var exitCodeMeaning = errorEvent.ExitCode switch
             {
@@ -306,7 +306,7 @@ public class ProblemDiagnosisService
                 3 => "找不到主类",
                 _ => "未知错误"
             };
-            result.DiagnosticSteps.Add($"📝 可能原因: {exitCodeMeaning}");
+            result.DiagnosticSteps.Add($"[分析] 可能原因: {exitCodeMeaning}");
         }
         
         if (!string.IsNullOrEmpty(version))
@@ -314,17 +314,17 @@ public class ProblemDiagnosisService
             var crashReport = _dataService.AnalyzeGameCrash(version);
             if (crashReport != null)
             {
-                result.DiagnosticSteps.Add($"📄 崩溃报告: {Path.GetFileName(crashReport.FilePath)}");
-                result.DiagnosticSteps.Add($"⏰ 崩溃时间: {crashReport.CrashTime:yyyy-MM-dd HH:mm:ss}");
+                result.DiagnosticSteps.Add($"[崩溃] 报告: {Path.GetFileName(crashReport.FilePath)}");
+                result.DiagnosticSteps.Add($"[崩溃] 时间: {crashReport.CrashTime:yyyy-MM-dd HH:mm:ss}");
                 
                 if (!string.IsNullOrEmpty(crashReport.Description))
                 {
-                    result.DiagnosticSteps.Add($"📝 描述: {crashReport.Description}");
+                    result.DiagnosticSteps.Add($"[描述] {crashReport.Description}");
                 }
                 
                 if (!string.IsNullOrEmpty(crashReport.ExceptionType))
                 {
-                    result.DiagnosticSteps.Add($"❌ 异常类型: {crashReport.ExceptionType}");
+                    result.DiagnosticSteps.Add($"[异常] 类型: {crashReport.ExceptionType}");
                 }
                 
                 result.RootCause = crashReport.SuggestedFix;
@@ -358,8 +358,8 @@ public class ProblemDiagnosisService
     {
         var hardware = _hardwareService.GetHardwareInfo();
         
-        result.DiagnosticSteps.Add($"🎮 显卡: {hardware.GpuName}");
-        result.DiagnosticSteps.Add($"📺 显存: {hardware.GpuMemory}");
+        result.DiagnosticSteps.Add($"[显卡] {hardware.GpuName}");
+        result.DiagnosticSteps.Add($"[显存] {hardware.GpuMemory}");
         
         result.RootCause = "图形相关问题，可能是显卡驱动过旧或光影/资源包不兼容。";
         
@@ -394,11 +394,11 @@ public class ProblemDiagnosisService
     
     private void DiagnoseGenericIssue(DiagnosisResult result, GameErrorEvent errorEvent)
     {
-        result.DiagnosticSteps.Add($"📋 原始错误: {errorEvent.RawLine}");
+        result.DiagnosticSteps.Add($"[原始错误] {errorEvent.RawLine}");
         
         if (!string.IsNullOrEmpty(errorEvent.Message))
         {
-            result.DiagnosticSteps.Add($"💬 错误信息: {errorEvent.Message}");
+            result.DiagnosticSteps.Add($"[错误信息] {errorEvent.Message}");
         }
         
         result.RootCause = "检测到未知类型的错误，建议查看详细日志。";
@@ -454,8 +454,8 @@ public class ProblemDiagnosisService
                 var success = await Task.Run(() => solution.Action());
                 result.Success = success;
                 result.Message = success 
-                    ? "✅ 修复成功！请重新启动游戏验证。" 
-                    : "❌ 自动修复失败，请尝试手动修复。";
+                    ? "[成功] 修复成功！请重新启动游戏验证。" 
+                    : "[失败] 自动修复失败，请尝试手动修复。";
                 result.Status = success ? FixStatus.Success : FixStatus.Failed;
             }
             else

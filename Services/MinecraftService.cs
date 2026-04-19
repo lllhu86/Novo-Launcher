@@ -44,13 +44,13 @@ public class MinecraftService
                 AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
                 AllowAutoRedirect = true,
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-                MaxConnectionsPerServer = 500
+                MaxConnectionsPerServer = 100
             };
             _httpClient = new HttpClient(handler);
             _httpClient.Timeout = TimeSpan.FromMinutes(30);
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "NMCL/1.0");
             
-            _downloadSemaphore = new SemaphoreSlim(100, 500);
+            _downloadSemaphore = new SemaphoreSlim(32, 64);
         }
         catch (Exception ex)
         {
@@ -61,7 +61,7 @@ public class MinecraftService
     public void SetDownloadMode(bool multiThread)
     {
         UseMultiThreadDownload = multiThread;
-        var concurrency = multiThread ? 500 : 100;
+        var concurrency = multiThread ? 64 : 32;
         if (_downloadSemaphore != null)
         {
             _downloadSemaphore.Dispose();
@@ -407,12 +407,10 @@ public class MinecraftService
 
         var totalAssets = assetIndex.Objects.Count;
         var downloadedAssets = 0;
-        var failedAssets = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var failedAssets = new System.Collections.Concurrent.ConcurrentBag<(string Name, string Hash, string SubDir)>();
         var tasks = new List<Task>();
-        var semaphore = new SemaphoreSlim(64, 64);
-        var rateLimitRetryDelay = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>();
         var total429Errors = 0;
-        var last429Time = DateTime.MinValue;
+        var total5xxErrors = 0;
 
         foreach (var kvp in assetIndex.Objects)
         {
@@ -421,11 +419,10 @@ public class MinecraftService
 
             tasks.Add(Task.Run(async () =>
             {
-                await semaphore.WaitAsync(cancellationToken);
+                var hash = asset.Hash;
+                var subDir = hash.Substring(0, 2);
                 try
                 {
-                    var hash = asset.Hash;
-                    var subDir = hash.Substring(0, 2);
                     var assetPath = Path.Combine(objectsDir, subDir, hash);
 
                     if (!File.Exists(assetPath))
@@ -436,41 +433,51 @@ public class MinecraftService
                             Directory.CreateDirectory(assetDir);
                         }
 
-                        var assetUrl = UseMirror
-                            ? $"{BMCLAPI_BASE}/assets/{subDir}/{hash}"
-                            : $"https://resources.download.minecraft.net/{subDir}/{hash}";
-
+                        var assetUrls = GetAssetDownloadUrls(subDir, hash);
+                        
                         var downloaded = false;
                         var retryCount = 0;
-                        var maxRetries = 5;
+                        var maxRetries = assetUrls.Count * 2;
+                        var currentUrlIndex = 0;
                         
                         while (!downloaded && retryCount < maxRetries)
                         {
                             try
                             {
-                                await DownloadFileAsync(assetUrl, assetPath, asset.Size, cancellationToken, false);
+                                var currentUrl = assetUrls[currentUrlIndex % assetUrls.Count];
+                                await DownloadFileAsync(currentUrl, assetPath, asset.Size, cancellationToken, false);
                                 downloaded = true;
                             }
                             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                             {
                                 retryCount++;
+                                currentUrlIndex++;
                                 Interlocked.Increment(ref total429Errors);
                                 
                                 var waitTime = Math.Min(5000 * retryCount, 30000);
-                                App.LogInfo($"429 限流，等待 {waitTime/1000} 秒后重试 ({retryCount}/{maxRetries}): {hash}");
+                                App.LogInfo($"429 限流，等待 {waitTime/1000} 秒后切换源重试 ({retryCount}/{maxRetries}): {hash}");
                                 await Task.Delay(waitTime, cancellationToken);
+                            }
+                            catch (HttpRequestException ex) when ((int?)ex.StatusCode >= 500 && (int?)ex.StatusCode < 600)
+                            {
+                                retryCount++;
+                                currentUrlIndex++;
+                                Interlocked.Increment(ref total5xxErrors);
+                                App.LogInfo($"服务器错误 ({(int?)ex.StatusCode})，切换下载源 ({retryCount}/{maxRetries}): {hash}");
+                                await Task.Delay(2000, cancellationToken);
                             }
                             catch (Exception ex) when (retryCount < maxRetries - 1)
                             {
                                 retryCount++;
-                                App.LogInfo($"资源下载重试 ({retryCount}/{maxRetries}): {hash}");
-                                await Task.Delay(1000 * retryCount, cancellationToken);
+                                currentUrlIndex++;
+                                App.LogInfo($"资源下载失败，切换源重试 ({retryCount}/{maxRetries}): {hash} - {ex.Message}");
+                                await Task.Delay(1000 * Math.Min(retryCount, 5), cancellationToken);
                             }
                         }
                         
                         if (!downloaded)
                         {
-                            failedAssets.Add(assetName);
+                            failedAssets.Add((assetName, hash, subDir));
                             App.LogError($"资源下载失败: {assetName} ({hash})");
                         }
                     }
@@ -491,13 +498,9 @@ public class MinecraftService
                 }
                 catch (Exception ex)
                 {
-                    failedAssets.Add(assetName);
+                    failedAssets.Add((assetName, hash, subDir));
                     App.LogError($"下载资源异常: {assetName}", ex);
                     Interlocked.Increment(ref downloadedAssets);
-                }
-                finally
-                {
-                    semaphore.Release();
                 }
             }, cancellationToken));
         }
@@ -509,10 +512,48 @@ public class MinecraftService
             App.LogInfo($"下载过程中遇到 {total429Errors} 次 429 限流错误");
         }
         
+        if (total5xxErrors > 0)
+        {
+            App.LogInfo($"下载过程中遇到 {total5xxErrors} 次服务器错误");
+        }
+        
         if (failedAssets.Count > 0)
         {
-            App.LogError($"共有 {failedAssets.Count} 个资源文件下载失败");
-            throw new Exception($"有 {failedAssets.Count} 个资源文件下载失败，请检查网络连接后重试");
+            App.LogInfo($"检测到 {failedAssets.Count} 个资源文件下载失败，尝试使用官方源重新下载...");
+            
+            var retrySuccess = 0;
+            var retryFailed = new List<string>();
+            
+            foreach (var (name, hash, subDir) in failedAssets)
+            {
+                try
+                {
+                    var assetPath = Path.Combine(objectsDir, subDir, hash);
+                    var officialUrl = $"https://resources.download.minecraft.net/{subDir}/{hash}";
+                    
+                    await DownloadFileAsync(officialUrl, assetPath, -1, cancellationToken, false);
+                    retrySuccess++;
+                    
+                    if (retrySuccess % 10 == 0)
+                    {
+                        App.LogInfo($"重试进度: {retrySuccess}/{failedAssets.Count}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    retryFailed.Add(name);
+                    App.LogError($"重试下载失败: {name} - {ex.Message}");
+                }
+            }
+            
+            if (retryFailed.Count > 0)
+            {
+                App.LogError($"重试后仍有 {retryFailed.Count} 个资源文件下载失败");
+                App.LogInfo($"失败的文件: {string.Join(", ", retryFailed.Take(10))}{(retryFailed.Count > 10 ? "..." : "")}");
+                throw new Exception($"有 {retryFailed.Count} 个资源文件下载失败，请检查网络连接后重试");
+            }
+            
+            App.LogInfo($"重试成功，已下载 {retrySuccess} 个失败文件");
         }
         
         App.LogInfo($"资源下载完成，共 {totalAssets} 个文件");
@@ -528,13 +569,14 @@ public class MinecraftService
 
         while (retryCount < MaxRetries)
         {
-            await _downloadSemaphore.WaitAsync(cancellationToken);
             try
             {
+                await _downloadSemaphore.WaitAsync(cancellationToken);
                 using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 
                 if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                 {
+                    _downloadSemaphore.Release();
                     retryCount++;
                     if (retryCount >= MaxRetries)
                     {
@@ -578,24 +620,30 @@ public class MinecraftService
                     {
                         progress = (double)totalRead / expectedSize * 100;
                     }
+                    else if (response.Content.Headers.ContentLength > 0)
+                    {
+                        progress = (double)totalRead / response.Content.Headers.ContentLength.Value * 100;
+                    }
                     else
                     {
-                        progress = 5;
+                        progress = -1;
                     }
                     
                     DownloadProgressChanged?.Invoke(this, new DownloadProgressEventArgs
                     {
-                        TotalBytes = expectedSize,
+                        TotalBytes = expectedSize > 0 ? expectedSize : (response.Content.Headers.ContentLength ?? 0),
                         DownloadedBytes = totalRead,
                         FileName = Path.GetFileName(filePath),
                         Progress = progress
                     });
                 }
 
+                _downloadSemaphore.Release();
                 return;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
+                _downloadSemaphore.Release();
                 retryCount++;
                 if (retryCount >= MaxRetries)
                 {
@@ -608,6 +656,7 @@ public class MinecraftService
             }
             catch (Exception ex)
             {
+                _downloadSemaphore.Release();
                 retryCount++;
                 lastException = ex;
                 
@@ -620,10 +669,6 @@ public class MinecraftService
                 App.LogInfo($"下载失败，等待 {waitTime/1000} 秒后重试 ({retryCount}/{MaxRetries}): {url} - {ex.Message}");
                 await Task.Delay(waitTime, cancellationToken);
                 continue;
-            }
-            finally
-            {
-                _downloadSemaphore.Release();
             }
         }
         
@@ -646,8 +691,9 @@ public class MinecraftService
                     .Replace("https://piston-data.mojang.com", BMCLAPI_BASE);
         }
 
-        App.LogInfo($"正在下载客户端：{url}");
-        await DownloadFileAsync(url, clientJarPath, 0L, cancellationToken, true, 5);
+        var expectedSize = version.Downloads.Client.Size;
+        App.LogInfo($"正在下载客户端：{url} (大小: {expectedSize / 1024.0 / 1024.0:F1} MB)");
+        await DownloadFileAsync(url, clientJarPath, expectedSize, cancellationToken, true);
     }
 
     private async Task DownloadLibrariesAsync(VersionDetail version, string librariesDir, CancellationToken cancellationToken)
@@ -808,7 +854,7 @@ public class MinecraftService
                         try
                         {
                             App.LogInfo($"尝试从 {mirror} 下载 {fileName}");
-                            await DownloadFileAsync(url, lib.FilePath, 0L, cancellationToken, false);
+                            await DownloadFileAsync(url, lib.FilePath, -1, cancellationToken, false);
                             App.LogInfo($"下载库：{lib.Name} (镜像：{mirror})");
                             downloaded = true;
                             break;
@@ -969,6 +1015,22 @@ public class MinecraftService
             App.LogError("验证资源文件时出错", ex);
             return false;
         }
+    }
+
+    private List<string> GetAssetDownloadUrls(string subDir, string hash)
+    {
+        var urls = new List<string>();
+        
+        if (UseMirror)
+        {
+            urls.Add($"https://bmclapi2.bangbang93.com/assets/{subDir}/{hash}");
+            urls.Add($"https://bmclapi.bangbang93.com/assets/{subDir}/{hash}");
+            urls.Add($"https://mirrors4.qlu.edu.cn/bmclapi/assets/{subDir}/{hash}");
+        }
+        
+        urls.Add($"https://resources.download.minecraft.net/{subDir}/{hash}");
+        
+        return urls;
     }
 
     public async Task<bool> VerifyLibrariesAsync(VersionDetail version, string librariesDir, CancellationToken cancellationToken = default)
